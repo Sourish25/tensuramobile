@@ -6,3 +6,12 @@ EPUB/
 playthrough_out.txt
 playthrough_final.txt
 slot_*
+
+war_bot.txt
+war_out.txt
+war_probe.txt
+war_debug.txt
+playthrough_final.txt
+playthrough_out.txt
+stack_dump.txt
+dbg_cast.txt

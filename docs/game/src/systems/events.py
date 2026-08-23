@@ -65,8 +65,8 @@ def orc_war_event(state):
         print(l)
     print()
     waves = [
-        (["orc_soldier", "orc_soldier", "orc_soldier"], "The first tide breaks against your lines."),
-        (["orc_rider", "orc_rider", "orc_soldier"], "Orc riders crash into the flank!"),
+        (["orc_soldier", "orc_soldier"], "The first tide breaks against your lines."),
+        (["orc_rider", "orc_soldier"], "Orc riders crash into the flank!"),
         (["orc_lord_geld"], "Geld himself advances, cleaver dragging furrows in the earth."),
     ]
     souls_mult = 3
@@ -74,7 +74,7 @@ def orc_war_event(state):
         print(f"\n{ui.Y}-- WAVE {i}/3 --{ui.RESET}")
         print(flavor)
         c = ui.choose("Command:", ["Take the field", "Let the walls work"])
-        scale = 1 + i * 0.15
+        scale = 0.9 + i * 0.1
         defense_cut = min(40, int(k.city_defense() / 14))
         enemies = []
         from src.entities.unit import enemy_from_template
@@ -84,6 +84,8 @@ def orc_war_event(state):
         if c == 0:
             allies = naming_sys.party_subs(state)
             b = combat.Battle(h, allies, enemies, location=f"ORC WAR - Wave {i}")
+            b.set_incoming_mult(0.75)
+            h.barrier_hp = int(h.max_hp * 0.35)
             result = b.run()
             win = result["result"] == "win"
             if win:
@@ -318,6 +320,7 @@ def empire_wave_event(state):
     if c == 0:
         allies = naming_sys.party_subs(state)
         b = combat.Battle(h, allies, enemies, location=f"EMPIRE WAR W{wave_no}")
+        b.set_incoming_mult(0.75)
         result = b.run()
         win = result["result"] == "win"
         if win:

@@ -15,6 +15,8 @@ from src.systems import events as events_sys
 from src.systems import post_god
 from src.screens import kingdom as kingdom_screen
 
+ITEMS_KIND = idata.ITEMS
+
 
 def status_view(state):
     h = state["hero"]
@@ -167,6 +169,10 @@ def battle_flow(state, monster_ids, location):
         if souls > 0:
             print(f"{ui.M}Souls drift into you: +{souls} (total {h.souls:,}){ui.RESET}")
         progression.check_awakening(state)
+        deltas = result.get("mastery_deltas") or []
+        if deltas:
+            dl = ", ".join(f"{get_skill(s)['name']} +{d:.0f}%" for s, d in deltas)
+            print(f"{ui.C}Mastery sharpened: {dl}{ui.RESET}")
         drops = result.get("drops", {})
         if drops:
             dl = [f"{idata.ITEMS[m]['name']} x{n}" for m, n in drops.items()]
@@ -534,9 +540,7 @@ def rest(state):
     h.hp = h.max_hp
     h.mp = h.max_mp
     scar_mult = 1.4 if (state.get("kingdom") and state["kingdom"].has("hot_spring")) else 1.0
-    healed = 0.0
-    for _ in range(1):
-        healed += h.recover_scar_on_rest() * scar_mult / 1.4
+    healed = h.recover_scar_on_rest() * scar_mult / 1.4
     state["world"]["day"] += 1
     if state["world"].get("recruit_pool") is not None and state["world"]["zone"] == "goblin_village":
         refresh_recruit_pool(state)
@@ -579,6 +583,8 @@ def rest(state):
             random_daily_event(state)
         if k.has("colosseum") and random.random() < 0.20 and state["world"]["day"] % 3 == 0:
             tournament_event(state)
+    autosave(state)
+    print(ui.DIM + "(auto-saved)" + ui.RESET)
     ui.pause()
 
 
@@ -624,6 +630,20 @@ def recruit_menu(state):
         result = naming_sys.naming_ceremony(state, cp["species"], cp["level"])
         if result:
             pool.pop(ci)
+
+
+def explore_repeat(state, times=5):
+    for i in range(times):
+        if not hero_ok_for_more(state):
+            break
+        explore(state)
+    print(ui.DIM + f"Exploration run complete." + ui.RESET)
+    ui.pause()
+
+
+def hero_ok_for_more(state):
+    h = state["hero"]
+    return h.alive and h.hp > h.max_hp * 0.25
 
 
 def descend(state):
@@ -695,20 +715,33 @@ def shop_menu(state):
                 stat = f"+{it.get('atk', it.get('def', 0))} {'ATK' if it['slot']=='weapon' else 'DEF'}"
             owned = f" x{h.consumables[k]}" if it["kind"] == "consumable" and k in h.consumables else ""
             opts.append(f"{it['name']}{owned} - {it['value']}g  {stat}  {ui.DIM}{desc}{ui.RESET}")
-        opts.append(f"Sell materials")
+        opts.append(f"Sell ALL materials")
+        opts.append(f"Sell duplicates")
         i = ui.choose("Trade:", opts, allow_cancel=True)
-        if i is None or i == len(opts) - 1:
-            if i == len(opts) - 1:
-                gold = 0
-                for m, n in list(h.materials.items()):
-                    sell = n - 1
-                    if sell > 0:
-                        gold += idata.ITEMS.get(m, {}).get("value", 0) * sell
-                        h.materials[m] = 1
-                h.gold += gold
-                ui.voice(f"Goods sold. +{gold} gold.")
-                continue
+        if i is None:
             return
+        if i == len(opts) - 2:
+            gold = 0
+            for m, n in list(h.materials.items()):
+                if ITEMS_KIND.get(m) == "relic":
+                    continue
+                gold += idata.ITEMS.get(m, {}).get("value", 0) * n
+                h.materials[m] = 0
+            for m in [k for k, v in h.materials.items() if v <= 0]:
+                del h.materials[m]
+            h.gold += gold
+            ui.voice(f"Everything sold (relics kept). +{gold} gold.")
+            continue
+        if i == len(opts) - 1:
+            gold = 0
+            for m, n in list(h.materials.items()):
+                sell = n - 1
+                if sell > 0:
+                    gold += idata.ITEMS.get(m, {}).get("value", 0) * sell
+                    h.materials[m] = 1
+            h.gold += gold
+            ui.voice(f"Goods sold. +{gold} gold.")
+            continue
         key = stock[i]
         item = idata.ITEMS[key]
         price = item["value"]
@@ -727,8 +760,7 @@ def shop_menu(state):
         ui.pause()
 
 
-def save_and_quit(state):
-    from src.core.save import save_game
+def build_payload(state):
     persist_world(state)
     payload = {
         "player": state["hero"].to_dict(),
@@ -740,10 +772,23 @@ def save_and_quit(state):
         payload["kingdom"] = state["kingdom"].to_dict()
     if state.get("postgod") is not None:
         payload["postgod"] = dict(state["postgod"])
-    ok = save_game(payload, slot=state["world"].get("slot", 1))
+    return payload
+
+
+def save_and_quit(state):
+    from src.core.save import save_game
+    ok = save_game(build_payload(state), slot=state["world"].get("slot", 1))
     if ok:
         ui.voice("Progress recorded in the Akashic records.")
     ui.pause()
+
+
+def autosave(state):
+    try:
+        from src.core.save import save_game
+        save_game(build_payload(state), slot=state["world"].get("slot", 1))
+    except Exception:
+        pass
 
 
 def persist_world(state):
@@ -774,6 +819,7 @@ def hub_loop(state):
 
         actions = [
             ("Explore", lambda: explore(state)),
+            ("Explore x5", lambda: explore_repeat(state, 5)),
             ("Roster", lambda: naming_sys.roster_menu(state)),
         ]
         caps = state.get("captures", [])

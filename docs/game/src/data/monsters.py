@@ -102,7 +102,7 @@ MONSTERS = {
     },
     "orc_soldier": {
         "name": "Orc Soldier", "glyph": "n", "ep": 400, "level": 6,
-        "stats": {"hp": 124, "mp": 22, "atk": 30, "def": 19, "mag": 6, "spr": 11, "agi": 12},
+        "stats": {"hp": 124, "mp": 22, "atk": 24, "def": 19, "mag": 6, "spr": 11, "agi": 12},
         "element": None, "skills": ["claw_swipe", "body_slam"],
         "xp": 100, "drops": [("orc_tusk", 0.5), ("crude_axe", 0.2), ("magic_crystal_shard", 0.4)],
         "stealable": ["monstrous_str"],
@@ -136,7 +136,7 @@ FACTION_SQUADS = {
 MONSTERS.update({
     "orc_rider": {
         "name": "Orc Rider", "glyph": "r", "ep": 700, "level": 7,
-        "stats": {"hp": 163, "mp": 27, "atk": 36, "def": 22, "mag": 8, "spr": 13, "agi": 24},
+        "stats": {"hp": 163, "mp": 27, "atk": 28, "def": 22, "mag": 8, "spr": 13, "agi": 24},
         "element": None, "skills": ["sharp_horn", "claw_swipe"],
         "xp": 170, "drops": [("orc_tusk", 0.6), ("magic_crystal_shard", 0.4)],
         "stealable": ["monstrous_str"],
@@ -149,7 +149,7 @@ MONSTERS.update({
         "stealable": ["monstrous_str", "fear_aura"], "signature_skill": "ravenous",
         "sparable": True,
         "desc": "A mountain of hunger given legs. The starving horde made flesh.",
-        "gimmicks": {"regen_pct": 0.04, "regen_blockers": ["burn"]},
+        "gimmicks": {"regen_pct": 0.02, "regen_blockers": ["burn"]},
         "phases": [
             {"at_hp_pct": 0.55, "stat_mult": {"atk": 1.25, "def": 1.2}, "gain_skills": ["death_march"],
              "announce": "The Orc Disaster's hunger deepens - it devours its own fallen!"},
@@ -173,7 +173,7 @@ MONSTERS.update({
     "imperial_guard": {
         "name": "Imperial Guardian", "glyph": "I", "ep": 60000, "level": 32,
         "stats": {"hp": 520, "mp": 120, "atk": 68, "def": 48, "mag": 40, "spr": 46, "agi": 30},
-        "element": None, "skills": ["claw_swipe", "barrier_basic", "melt_slash_placeholder_never"],
+        "element": None, "skills": ["claw_swipe", "barrier_basic", "melt_slash"],
         "xp": 14000, "drops": [("god_class_shard", 0.6), ("magic_crystal_small", 1.0)],
         "stealable": [],
         "desc": "One of the Empire's hundred numbered knights.",
@@ -181,9 +181,9 @@ MONSTERS.update({
     "kondo_guardian": {
         "name": "Lt. General Kondo", "glyph": "K", "ep": 250000, "level": 40, "boss": True,
         "stats": {"hp": 2400, "mp": 500, "atk": 96, "def": 66, "mag": 60, "spr": 70, "agi": 52},
-        "element": "holy", "skills": ["creations_blade_placeholder_never", "sandalphon_u", "sharp_horn"],
+        "element": "holy", "skills": ["sandalphon_u", "sharp_horn", "claw_swipe"],
         "xp": 60000, "drops": [("genesis_fragment", 1.0), ("god_class_shard", 1.0)],
-        "stealable": [], "signature_skill": "sandalphon_u",
+        "stealable": [], "signature_skill": "creations_blade",
         "desc": "Leader of the Imperial Guardians. Oboro Shinmei-ryu perfected.",
         "gimmicks": {"ultimate_aura": True},
         "phases": [
@@ -254,7 +254,7 @@ MONSTERS.update({
     },
     "milim_trial": {
         "name": "Milim Nava, the Destroyer", "glyph": "!", "ep": 3000000, "level": 55, "boss": True,
-        "stats": {"hp": 5200, "mp": 900, "atk": 110, "def": 120, "mag": 95, "spr": 110, "agi": 120},
+        "stats": {"hp": 3800, "mp": 900, "atk": 110, "def": 120, "mag": 95, "spr": 110, "agi": 120},
         "element": None, "skills": ["claw_swipe", "flame_breath_u", "sharp_horn", "time_stop"],
         "xp": 700000, "drops": [("genesis_fragment", 1.0), ("god_class_shard", 1.0)],
         "stealable": [], "signature_skill": "time_stop",

@@ -244,30 +244,60 @@ def make_battle_bot(state, script=None):
     PRIORITY = ["soul consume", "void collapse", "hellflare", "white flare", "melt slash",
                 "death march", "creations blade", "cardinal", "sticky steel",
                 "steel thread", "time stop", "flame breath", "wind cutter",
-                "water blade", "lightning", "fireball", "icicle", "stone bullet", "drain"]
+                "water blade", "lightning bolt", "fireball", "icicle lance",
+                "stone bullet", "drain", "ultrasonic"]
+    ctx = {"force_attack": False}
 
     def battle_bot(prompt, options, allow_cancel=False, cancel_label="Back", color=None):
         low = prompt.lower()
         if "turn - command" in low:
             h = state["hero"]
             has_item = any(o.strip().lower() == "item" for o in options)
+            if ctx["force_attack"]:
+                ctx["force_attack"] = False
+                return options.index("Attack") if "Attack" in options else 1
             if h.hp < h.max_hp * 0.45 and has_item and h.consumables:
-                return options.index("Item") if "Item" in options else 3
+                return options.index("Item") if "Item" in options else 4
             has_skill = any(o.strip().lower() == "skill" for o in options)
-            mp_ok = h.mp > h.max_mp * 0.25
-            if has_skill and mp_ok:
-                return options.index("Skill") if "Skill" in options else 1
-            return options.index("Attack") if "Attack" in options else 0
+            if has_skill:
+                return options.index("Skill") if "Skill" in options else 2
+            return options.index("Attack") if "Attack" in options else 1
         if "use which item" in low:
             for n, o in enumerate(options):
-                if "potion" in o.lower() and "mp draft" not in o.lower():
+                ol = o.lower()
+                if h := state["hero"]:
+                    if "mp draft" in ol and h.mp < h.max_mp * 0.3:
+                        return n
+                if "potion" in ol and "mp draft" not in ol:
                     return n
             return 0
         if "use which skill" in low:
-            for hint in PRIORITY:
-                for n, o in enumerate(options):
-                    if hint in o.lower():
-                        return n
+            tier_score = {"[ultimate]": 50, "[unique]": 30, "[extra]": 15}
+            best_n, best_s = None, -1
+            for n, o in enumerate(options):
+                ol = o.lower()
+                mp_cost = 0
+                if "MP:" in o:
+                    try:
+                        mp_cost = int(o.split("MP:")[1].split()[0])
+                    except Exception:
+                        mp_cost = 0
+                if state["hero"].mp < mp_cost:
+                    continue
+                score = next((v for k, v in tier_score.items() if k in ol), 0)
+                for i2, hint in enumerate(PRIORITY):
+                    if hint in ol:
+                        score += 100 - i2
+                        break
+                if score > best_s:
+                    best_n, best_s = n, score
+            if best_n is None:
+                ctx["force_attack"] = True
+                return 0
+            return best_n
+        if "skill?" in low or "which skill" in low:
+            import sys as _s
+            print(f"    [raw skill menu] {options}", file=_s.stderr, flush=True)
             return 0
         if "target" in low:
             return 0

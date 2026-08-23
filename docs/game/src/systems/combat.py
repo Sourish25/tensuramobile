@@ -45,6 +45,11 @@ class Battle:
         self.log = BattleLog()
         self.result = None
         self.rng = random.Random()
+        self.mastery_snapshot = {sid: d["mastery"] for sid, d in hero.skills.items()}
+        self.incoming_mult = 1.0
+
+    def set_incoming_mult(self, mult):
+        self.incoming_mult = mult
 
     @property
     def party(self):
@@ -55,7 +60,12 @@ class Battle:
         return [e for e in self.enemies if e.alive]
 
     def party_has_ultimate(self):
-        return any(u.has_skill("raphael") or u.has_skill("belzebuth") for u in self.party)
+        for u in self.party:
+            for sid in u.skills:
+                s = get_skill(sid)
+                if s and s["tier"] == "ultimate" and s.get("kind") == "passive":
+                    return True
+        return False
 
     def foes_have_ultimate(self):
         return any(getattr(e, "gimmicks", {}).get("ultimate_aura") for e in self.enemies if e.alive)
@@ -65,6 +75,10 @@ class Battle:
 
     def run(self):
         while self.result is None:
+            if self.round_no > 60:
+                self.log.add(f"{ui.R}After 60 rounds of stalemate, exhaustion claims your side...{ui.RESET}")
+                self.result = "lose"
+                break
             order = sorted(
                 self.party + self.foes,
                 key=lambda u: (
@@ -164,6 +178,12 @@ class Battle:
 
     def start_of_turn(self, u):
         u.guarding = False
+        if getattr(u, "form_cooldown", 0) > 0:
+            u.form_cooldown -= 1
+        if u.has_skill("belzebuth") or u.has_skill("azathoth"):
+            regen = max(2, int(u.max_mp * 0.03))
+            if u.mp < u.max_mp:
+                u.mp = min(u.max_mp, u.mp + regen)
         before = u.hp
         expired = u.tick_statuses()
         dmg = before - u.hp
@@ -185,6 +205,7 @@ class Battle:
         ui.clear()
         ui.header(f"{self.location} - Round {self.round_no}", f"{len(self.foes)} enemies")
         foe_lines = []
+        from src.entities.unit import rank_from_ep
         for i, e in enumerate(self.enemies, 1):
             tag = " BOSS" if e.is_boss else ""
             state = "" if e.alive else " (slain)"
@@ -199,11 +220,9 @@ class Battle:
                 tags += ui.BR + "[SPELL-NULL FIELD]" + ui.RESET + " "
             if getattr(e, "phase_data", None) and getattr(e, "phase_idx", 0) < len(e.phase_data):
                 tags += ui.DIM + "[PHASED]" + ui.RESET
+            rank = rank_from_ep(int(e.ep_value * (1 + (self.round_no - 1) * 0)))
             foe_lines.append(f"[{i}] {e.glyph} {e.name}{tag}{state} {tags}")
-            extra = f"      {hp_bar} {e.hp}/{e.max_hp}"
-            if e.barrier_field_hp > 0:
-                extra += f"   DOMAIN {e.barrier_field_hp}"
-            foe_lines.append(extra)
+            foe_lines.append(f"      {hp_bar} {e.hp}/{e.max_hp}   {ui.DIM}EP ~{e.ep_value:,} [{rank}]{ui.RESET}")
             if st:
                 foe_lines.append(f"      {ui.DIM}{st}{ui.RESET}")
         for l in ui.panel(" ENEMIES ", foe_lines, ui.ENEMY_C):
@@ -223,7 +242,15 @@ class Battle:
             label = "* " if is_hero else "  "
             form = getattr(u, "evolve_name", None)
             stage = form or getattr(u, "stage_name", "Ally")
-            party_lines.append(f"{label}{u.name} ({stage}){state} {g}")
+            extra = ""
+            if is_hero:
+                if getattr(u, "auto", False):
+                    extra += ui.BY + "[AUTO] " + ui.RESET
+                if getattr(u, "active_form", None):
+                    extra += ui.BM + f"[{u.active_form}] " + ui.RESET
+                elif u.mimic_forms:
+                    extra += ui.DIM + "[forms available] " + ui.RESET
+            party_lines.append(f"{label}{u.name} ({stage}){state} {extra}{g}")
             party_lines.append(f"     HP {hp_bar}  MP {mp_bar} {u.mp}/{u.max_mp}")
         for l in ui.panel(" PARTY ", party_lines, ui.G):
             print(l)
@@ -304,10 +331,10 @@ class Battle:
                 if p.alive and p.has_skill("magic_interference_f"):
                     dmg *= 0.5
                     break
-        if target.has_skill("susano_oh"):
+        if target.has_skill("susano_oh") and (get_skill(sid)["tier"] if sid and get_skill(sid) else "common") != "ultimate":
             dmg *= (1 - get_skill("susano_oh").get("dmg_reduction", 0.25))
-        if attacker.has_skill("berserker") and attacker.has_skill("susano_oh"):
-            pass
+        if (target is self.hero or target in self.allies):
+            dmg *= getattr(self, "incoming_mult", 1.0)
         dmg = max(1, int(dmg))
         return dmg, crit, emult, el
 
@@ -364,6 +391,28 @@ class Battle:
             self.log.add(f"{ui.R}{actor.name} lacks magicules for {skill['name']}.{ui.RESET}")
             return
         actor.mp -= cost
+        kind = skill.get("kind")
+        if kind == "support":
+            heal_pool = [t for t in ([target] if target else []) if t and t.alive]
+            scale_key = {"atk": "atk", "mag": "mag", "agi": "agi"}.get(skill.get("scale"), "mag")
+            mastery = actor.skills[sid]["mastery"] if sid in actor.skills else 0
+            amount = int(skill.get("power", 0) * max(1, actor.eff_stat(scale_key)) / 9.0 * (1 + mastery / 150.0))
+            for t in heal_pool:
+                healed = t.max_hp - t.hp
+                t.hp = min(t.max_hp, t.hp + amount)
+                for st in (skill.get("status") or {}):
+                    t.add_status(st, 3)
+                self.log.add(f"{ui.BG}{actor.name} channels {skill['name']} -> {t.name}: +{min(amount, healed)} HP.{ui.RESET}")
+            mastery_gain(actor, sid)
+            return
+        if kind == "defense":
+            pool = [t for t in ([target] if target else []) if t and t.alive]
+            shield = int(skill.get("power", 10) * 2 + actor.eff_stat("mag") / 3)
+            for t in pool:
+                t.barrier_hp += shield
+                self.log.add(f"{ui.C}{actor.name} raises {skill['name']} around {t.name}: Barrier {shield}.{ui.RESET}")
+            mastery_gain(actor, sid)
+            return
         targets = []
         tmode = skill.get("target", "enemy")
         if tmode == "enemy":
@@ -426,6 +475,9 @@ class Battle:
         dmg, crit, emult, el = self.calc_damage(actor, pseudo, target)
         t = target
         t.hp -= dmg
+        if actor.has_skill("ravenous"):
+            steal = max(1, int(dmg * get_skill("ravenous").get("lifesteal_basic", 0.20)))
+            actor.hp = min(actor.max_hp, actor.hp + steal)
         note = self.apply_hit(actor, pseudo, t, dmg)
         color = ui.ALLY_C if actor in self.party else ui.ENEMY_C
         cc = " CRIT!" if crit else ""
@@ -434,21 +486,85 @@ class Battle:
             self.log.add(f"{ui.BOLD}{t.name} is destroyed!{ui.RESET}")
         self.check_end()
 
+    AUTO_PRIORITY = ["soul consume", "void collapse", "hellflare", "white flare", "melt slash",
+                     "death march", "creations blade", "cardinal", "sticky steel",
+                     "steel thread", "time stop", "flame breath", "wind cutter",
+                     "water blade", "lightning bolt", "fireball", "icicle lance",
+                     "stone bullet", "drain", "ultrasonic"]
+
+    def auto_decide(self, u):
+        foes = self.foes
+        if not foes:
+            return ("wait", None)
+        if u.hp < u.max_hp * 0.35:
+            pot = next((k for k in sorted(u.consumables)
+                        if ITEMS.get(k, {}).get("heal_hp")), None)
+            if pot and u.consumables.get(pot, 0) > 0:
+                return ("item", pot)
+        best = (None, -1.0)
+        for sid, d in u.skills.items():
+            s = get_skill(sid)
+            if not s or s.get("kind") != "attack" or u.mp < s.get("mp", 0):
+                continue
+            name = s["name"].lower()
+            prio = next((i for i, h in enumerate(self.AUTO_PRIORITY) if h in name), 90)
+            score = 100 - prio + s.get("power", 5) / 10.0
+            if score > best[1]:
+                best = (sid, score)
+        if best[0]:
+            s = get_skill(best[0])
+            tgt = max(foes, key=lambda t: t.hp / max(1, t.max_hp)) if s.get("target") == "enemy" else None
+            if s.get("target") == "enemy":
+                tgt = min(foes, key=lambda t: t.hp)
+            return ("skill", (best[0], tgt))
+        return ("attack", min(foes, key=lambda t: t.hp))
+
+    def run_auto_turn(self, u):
+        act, payload = self.auto_decide(u)
+        if act == "item":
+            self.use_item(u, payload)
+        elif act == "skill":
+            sid, tgt = payload
+            if tgt is None:
+                tgt = max(self.foes, key=lambda t: t.max_hp) if get_skill(sid).get("target") == "single_strongest" else None
+            self.perform_skill(u, sid, tgt)
+        elif act == "attack":
+            self.basic_attack(u, payload)
+        else:
+            u.guarding = True
+
     def player_turn(self, u):
         while True:
+            if getattr(u, "auto", False):
+                self.draw()
+                tag = ui.BY + "[AUTO]" + ui.RESET + " "
+                self.log.add(f"{tag}{u.name} acts on instinct...")
+                self.run_auto_turn(u)
+                return
             self.draw()
             acts = ["Attack", "Skill", "Guard", "Item"]
+            label_auto = "Auto: OFF" if not getattr(u, "auto", False) else "Auto: ON"
+            acts.insert(0, label_auto)
+            idx_shift = 1
             if u.mimic_forms:
                 acts.append("Form")
             acts.append("Flee")
             c = ui.choose(f"{u.name}'s turn - command:", acts, allow_cancel=False)
             if c == 0:
+                u.auto = not getattr(u, "auto", False)
+                state_txt = ui.BY + "ENGAGED" + ui.RESET if u.auto else ui.DIM + "released" + ui.RESET
+                self.log.add(f"{u.name}: auto-battle {state_txt}.")
+                if u.auto:
+                    self.run_auto_turn(u)
+                    return
+                continue
+            elif c == 1:
                 tgt = self.pick_target(u, self.foes, allow_back=True)
                 if tgt is None:
                     continue
                 self.basic_attack(u, tgt)
                 return
-            elif c == 1:
+            elif c == 2:
                 usable = [sid for sid, d in u.skills.items()
                           if (get_skill(sid) or {}).get("kind") in ("attack", "support", "defense")]
                 names = []
@@ -465,8 +581,16 @@ class Battle:
                     ui.pause(ui.R + "Not enough MP. Pick again." + ui.RESET)
                     continue
                 tgt = None
-                if s.get("target") in ("enemy", "ally") :
-                    pool = self.foes if s["target"] == "enemy" else [x for x in self.party if x.alive]
+                if s.get("target") == "enemy":
+                    pool = self.foes
+                    if len(pool) > 1:
+                        tgt = self.pick_target(u, pool)
+                        if tgt is None:
+                            continue
+                    else:
+                        tgt = pool[0]
+                elif s.get("target") == "ally":
+                    pool = [x for x in self.party if x.alive]
                     if len(pool) > 1:
                         tgt = self.pick_target(u, pool)
                         if tgt is None:
@@ -475,11 +599,11 @@ class Battle:
                         tgt = pool[0]
                 self.perform_skill(u, sid, tgt)
                 return
-            elif c == 2:
+            elif c == 3:
                 u.guarding = True
                 self.log.add(f"{ui.C}{u.name} guards.{ui.RESET}")
                 return
-            elif c == 3:
+            elif c == 4:
                 keys = [k for k, v in u.consumables.items() if v > 0]
                 if not keys:
                     ui.pause(ui.R + "No items." + ui.RESET)
@@ -491,12 +615,23 @@ class Battle:
                 k = keys[ii]
                 self.use_item(u, k)
                 return
-            elif c == 4 and "Form" in acts:
-                fi = ui.choose("Assume which form?", u.mimic_forms, allow_cancel=True)
+            elif c == 5 and "Form" in acts:
+                if getattr(u, "form_cooldown", 0) > 0 and u.active_form:
+                    ui.pause(ui.R + f"Body still stabilizing ({u.form_cooldown} turns)." + ui.RESET)
+                    continue
+                fopts = list(u.mimic_forms)
+                if u.active_form:
+                    fopts.append("Revert to base form")
+                fi = ui.choose("Assume which form?", fopts, allow_cancel=True)
                 if fi is None:
                     continue
+                if fi == len(fopts) - 1 and u.active_form:
+                    u.active_form = None
+                    self.log.add(f"{ui.BM}{u.name} flows back to base form.{ui.RESET}")
+                    return
                 u.active_form = u.mimic_forms[fi]
-                self.log.add(f"{ui.BM}{u.name} shifts form: {u.active_form}!{ui.RESET}")
+                u.form_cooldown = 3
+                self.log.add(f"{ui.BM}{u.name} shifts form: {u.active_form}! (+15% ATK/DEF/MAG){ui.RESET}")
                 return
             elif c == len(acts) - 1:
                 agi_u = u.eff_stat("agi")
@@ -579,6 +714,12 @@ class Battle:
 
     def finish(self):
         out = {"result": self.result, "rounds": self.round_no}
+        deltas = []
+        for sid, old in self.mastery_snapshot.items():
+            new = self.hero.skills.get(sid, {}).get("mastery", old)
+            if new > old:
+                deltas.append((sid, new - old))
+        out["mastery_deltas"] = sorted(deltas, key=lambda x: -x[1])[:4]
         if self.result == "win":
             xp_total = sum(e.xp_reward for e in self.enemies)
             max_foe_lvl = max((e.level for e in self.enemies), default=1)

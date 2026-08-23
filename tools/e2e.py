@@ -96,9 +96,17 @@ def run_village_flow():
     }
 
     SCRIPT.push(
-        1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        ("pick", "wolf"),
+    )
+    for _ in range(10):
+        SCRIPT.push(("pick", "Attack"))
+        SCRIPT.push(("pick", "Direwolf"))
+    for _ in range(6):
+        SCRIPT.push(("pick", "Devour"))
+    SCRIPT.push(
+        ("pick", "Inscribe"),
         "Rigurd",
+        ("pick", "Join active party"),
     )
     hub.first_meeting(state)
 
@@ -126,7 +134,12 @@ def run_capture_naming():
     hero = Player("Capturer", "slime")
     state = {"hero": hero, "world": {"day": 1}, "roster": [], "captures": []}
     naming_sys.captures_add(state, "dire_wolf", 3)
-    SCRIPT.push(1, 1, "Fang", 1, 0)
+    SCRIPT.push(
+        ("pick", "Direwolf"),
+        ("pick", "Inscribe"),
+        "Fang",
+        ("pick", "Join active party"),
+    )
     naming_sys.captures_menu(state)
     assert not state["captures"], "capture not consumed"
     roster = naming_sys.load_roster(state)

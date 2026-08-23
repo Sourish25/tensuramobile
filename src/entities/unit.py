@@ -4,6 +4,8 @@ from src.data.items import ITEMS
 
 
 def rank_from_ep(ep):
+    if ep >= 100_000_000:
+        return "GOD"
     if ep >= 1_000_000:
         return "Million"
     if ep >= 800_000:
@@ -27,6 +29,15 @@ def rank_from_ep(ep):
     if ep >= 400:
         return "E"
     return "F"
+
+
+RACE_STARTER_NUKE = {
+    "slime": "icicle_lance",
+    "goblin": "fireball",
+    "lizardman": "water_blade",
+    "ogre": "stone_bullet",
+    "direwolf": "wind_cutter",
+}
 
 
 class Unit:
@@ -81,6 +92,8 @@ class Unit:
     def eff_stat(self, key):
         v = self.stats[key] + self.passive_stat_bonus().get(key, 0)
         st = self.status
+        if "amp" in st and key in ("atk", "mag"):
+            v = int(v * 1.4)
         if key == "atk" and ("fear" in st or "fear_aura_debuff" in st):
             v = int(v * 0.85)
         if key == "agi" and "bind" in st:
@@ -167,6 +180,7 @@ class Player(Unit):
         self.phase = 0
         self.demon_lord = False
         self.godhood = False
+        self.auto = False
         self.party_ids = []
 
     @property
@@ -176,6 +190,15 @@ class Player(Unit):
     @property
     def max_mp(self):
         return max(10, int(self.stats["mp"] - self.mp_scar))
+
+    def eff_stat(self, key):
+        v = super().eff_stat(key)
+        if getattr(self, "active_form", None):
+            if key in ("atk", "def", "mag"):
+                v = int(v * 1.15)
+            elif key == "agi":
+                v = int(v * 0.95)
+        return v
 
     @property
     def alive(self):
@@ -223,6 +246,9 @@ class Player(Unit):
             self.latent_unlocked = True
             for sid in r["latent_unique"]:
                 self.learn_skill(sid)
+            starter = RACE_STARTER_NUKE.get(self.race_id)
+            if starter:
+                self.learn_skill(starter, mastery=25)
             return "latent"
         return "normal"
 
@@ -308,6 +334,7 @@ class Player(Unit):
             "mp_scar": self.mp_scar,
             "demon_lord": self.demon_lord,
             "godhood": self.godhood,
+            "auto": self.auto,
             "_evo_stage": getattr(self, "_evo_stage", None),
         }
 
@@ -337,6 +364,7 @@ class Player(Unit):
         p.mp_scar = d.get("mp_scar", 0.0)
         p.demon_lord = d.get("demon_lord", False)
         p.godhood = d.get("godhood", False)
+        p.auto = d.get("auto", False)
         p._evo_stage = d.get("_evo_stage")
         p.hp = min(p.max_hp, p.stats["hp"])
         p.mp = min(p.max_mp, p.stats["mp"])

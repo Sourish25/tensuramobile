@@ -24,7 +24,7 @@ def name_cost(hero, species_key):
 def can_name(hero, species_key):
     cost = name_cost(hero, species_key)
     remaining = hero.stats["mp"] - hero.mp_scar - cost
-    return remaining >= hero.stats["mp"] * 0.08, cost
+    return remaining >= hero.stats["mp"] * 0.06, cost
 
 
 def naming_ceremony(state, species_key, level, source="capture", discount_pct=0.0):
