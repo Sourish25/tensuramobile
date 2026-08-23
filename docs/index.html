@@ -45,6 +45,7 @@
   <h1>TENSURA</h1>
   <div class="spin"></div>
   <p id="loadmsg">summoning python into your browser...</p>
+  <pre id="errdetail" style="max-width:90vw; max-height:30vh; overflow:auto; font-size:.62rem; opacity:.75; white-space:pre-wrap;"></pre>
 </div>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
@@ -87,24 +88,97 @@ window.tensuraPrompt = function(text){
   return window.prompt(cleaned);
 };
 
+<script>
+const APP_VERSION = "v1.0.2";
+document.title = `Tensura ${APP_VERSION}`;
+
+const term = document.getElementById("term");
+function esc(s){ return s.replace(/\x1b/g, "").replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+function ansiToHtml(s){
+  const parts = s.split("\x1b[");
+  let out = esc(parts.shift());
+  const stack = [];
+  const map = {"1":"font-weight:bold","3":"font-style:italic","2":"opacity:.55",
+    "31":"#ff6b6b","32":"#69db7c","33":"#ffd75e","34":"#74c0fc",
+    "35":"#e599f7","36":"#66d9e8","37":"#cfe3ff",
+    "91":"#ff8787","92":"#8ce99a","93":"#ffe066","94":"#a5d8ff",
+    "95":"#eebefa","96":"#99e9f2","97":"#ffffff"};
+  for (const part of parts){
+    const m = part.match(/^([0-9;]*)m/);
+    if (!m){ out += esc(part); continue; }
+    const rest = part.slice(m[0].length);
+    for (const code of m[1].split(";").filter(x=>x!=="")){
+      if (code === "0") stack.length = 0; else stack.push(code);
+    }
+    if (stack.length === 0){ out += esc(rest); continue; }
+    const style = stack.map(c=>map[c] ? `color:${map[c]}` : "")
+                       .filter(Boolean).join(";");
+    out += style ? `<span style="${style}">${esc(rest)}</span>` : esc(rest);
+  }
+  return out + "\n";
+}
+
+window.tensuraPush = function(chunk){
+  if (!chunk) return;
+  term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
+  const m = document.querySelector("main");
+  m.scrollTop = m.scrollHeight;
+};
+window.tensuraPrompt = function(text){
+  const cleaned = text.replace(/\x1b\[[0-9;]*m/g, "");
+  return window.prompt(cleaned);
+};
+
+function loadScript(src){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = ()=>reject(new Error("could not load " + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function loadPyodideWithFallback(setMsg){
+  const sources = [
+    "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/",
+    "https://unpkg.com/pyodide@0.26.2/",
+    "https://cdn.jsdelivr.net/npm/pyodide@0.26.2/"
+  ];
+  let lastErr = null;
+  for (let i=0;i<sources.length;i++){
+    const base = sources[i];
+    try {
+      setMsg(`loading python runtime ${i+1}/${sources.length} (${new URL(base).host})...`);
+      await loadScript(base + "pyodide.js");
+      if (typeof loadPyodide !== "function") throw new Error("loader missing");
+      return await loadPyodide({ indexURL: base });
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("all python mirrors failed");
+}
+
 async function boot(){
   const bar = document.getElementById("bootbar");
   const msg = document.getElementById("loadmsg");
+  const ver = document.getElementById("ver");
+  if (ver) ver.textContent = APP_VERSION;
   try {
-    if (typeof loadPyodide === "undefined"){
-      throw new Error("Pyodide runtime failed to download. Check connection/reload.");
-    }
-    msg.textContent = "downloading python runtime (~7MB, cached after first load)...";
-    pyodide = await loadPyodide();
+    pyodide = await loadPyodideWithFallback(t=>msg.textContent=t);
     bar.style.width = "40%";
     msg.textContent = "inscribing world language...";
+    pyodide.FS.mkdirTree("/game");
     await pyodide.runPythonAsync(`import sys, os
 sys.path.insert(0, "/game")
 os.chdir("/game")`);
-    const files = await fetch("files.json").then(r=>r.json());
+    const files = await fetch(`files.json?v=${APP_VERSION}`).then(r=>{
+      if (!r.ok) throw new Error("files.json missing");
+      return r.json();
+    });
     let done = 0;
     for (const f of files){
-      const resp = await fetch("game/" + f);
+      const resp = await fetch(`game/${f}?v=${APP_VERSION}`);
       if (!resp.ok) throw new Error("missing " + f);
       const buf = new Uint8Array(await resp.arrayBuffer());
       const dir = ("/game/" + f).split("/").slice(0,-1).join("/");
@@ -125,7 +199,9 @@ game_web.boot()
     l.style.opacity = "0";
     setTimeout(()=>l.remove(), 550);
   } catch (err){
-    msg.textContent = "failed to wake the dragon: " + err.message;
+    msg.textContent = "failed to wake the dragon: " + (err && err.message ? err.message : err);
+    const pre = document.getElementById("errdetail");
+    if (pre) pre.textContent = (err && err.stack) ? String(err.stack).slice(0, 900) : "";
   }
 }
 boot();
