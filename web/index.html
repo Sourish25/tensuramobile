@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0e14">
+<title>Tensura: Path of the Reincarnated</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root {
+    --bg: #0a0e14; --pane: #0d1420; --edge: #1d2b3f;
+    --gold: #ffd75e; --fg: #cfe3ff;
+    font-size: clamp(11px, 2.6vh, 17px);
+  }
+  @media (orientation: landscape) { :root { font-size: clamp(10px, 2.3vw, 16px); } }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; background:var(--bg); color:var(--fg);
+    font-family:"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace; }
+  body { display:flex; flex-direction:column; overflow:hidden; }
+  header { padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--edge); background:var(--pane); flex:0 0 auto; }
+  header .t { color:var(--gold); font-weight:700; letter-spacing:.15em; font-size:.85rem; }
+  header .s { font-size:.65rem; opacity:.55; letter-spacing:.08em; }
+  #bootbar { height:2px; background:linear-gradient(90deg,#7c4dff,#00e5ff); width:0%; transition:width .4s; }
+  main { flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
+    padding:10px 10px calc(env(safe-area-inset-bottom) + 24px); }
+  @media (orientation:landscape) and (min-width:760px){ main{ max-width:112ch; margin:0 auto; width:100%; } }
+  pre.term { font-family:inherit; font-size:1rem; line-height:1.38;
+    white-space:pre-wrap; word-break:break-word; text-shadow:0 0 6px rgba(120,180,255,.12); }
+  #loading { position:fixed; inset:0; display:flex; flex-direction:column; gap:16px;
+    align-items:center; justify-content:center; background:var(--bg); z-index:9; transition:opacity .5s; }
+  #loading h1 { color:var(--gold); font-size:1.15rem; letter-spacing:.25em; }
+  #loading p { opacity:.6; font-size:.75rem; max-width:30ch; text-align:center; line-height:1.5; }
+  .spin { width:36px; height:36px; border-radius:50%;
+    border:3px solid var(--edge); border-top-color:var(--gold); animation:sp 1s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<header><div class="t">TENSURA</div><div class="s">path of the reincarnated</div></header>
+<div id="bootbar"></div>
+<main><pre class="term" id="term"></pre></main>
+<div id="loading">
+  <h1>TENSURA</h1>
+  <div class="spin"></div>
+  <p id="loadmsg">summoning python into your browser...</p>
+</div>
+
+<script>
+const term = document.getElementById("term");
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+function ansiToHtml(s){
+  const parts = s.split("\x1b[");
+  let out = esc(parts.shift());
+  const stack = [];
+  const map = {"1":"font-weight:bold","3":"font-style:italic","2":"opacity:.55",
+    "31":"#ff6b6b","32":"#69db7c","33":"#ffd75e","34":"#74c0fc",
+    "35":"#e599f7","36":"#66d9e8","37":"#cfe3ff",
+    "91":"#ff8787","92":"#8ce99a","93":"#ffe066","94":"#a5d8ff",
+    "95":"#eebefa","96":"#99e9f2","97":"#ffffff"};
+  for (const part of parts){
+    const m = part.match(/^([0-9;]*)m/);
+    if (!m){ out += esc(part); continue; }
+    const rest = part.slice(m[0].length);
+    for (const code of m[1].split(";").filter(x=>x!=="")){
+      if (code === "0") stack.length = 0; else stack.push(code);
+    }
+    if (stack.length === 0){ out += esc(rest); continue; }
+    const style = stack.map(c=>map[c] ? `color:${map[c]}` : (map[c]||""))
+                       .filter(Boolean).join(";");
+    out += style ? `<span style="${style}">${esc(rest)}</span>` : esc(rest);
+  }
+  return out + "\n";
+}
+
+window.tensuraPush = function(chunk){
+  if (!chunk) return;
+  term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
+  const m = document.querySelector("main");
+  m.scrollTop = m.scrollHeight;
+};
+window.tensuraPrompt = function(text){
+  const cleaned = text.replace(/\x1b\[[0-9;]*m/g, "");
+  return window.prompt(cleaned);
+};
+
+async function boot(){
+  const bar = document.getElementById("bootbar");
+  const msg = document.getElementById("loadmsg");
+  try {
+    msg.textContent = "downloading python runtime (~7MB, cached after first load)...";
+    pyodide = await loadPyodide();
+    bar.style.width = "40%";
+    msg.textContent = "inscribing world language...";
+    await pyodide.runPythonAsync(`import sys, os
+sys.path.insert(0, "/game")
+os.chdir("/game")`);
+    const files = await fetch("files.json").then(r=>r.json());
+    let done = 0;
+    for (const f of files){
+      const resp = await fetch("/game/" + f);
+      if (!resp.ok) throw new Error("missing " + f);
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      const dir = ("/game/" + f).split("/").slice(0,-1).join("/");
+      try { pyodide.FS.mkdirTree(dir); } catch(e){}
+      pyodide.FS.writeFile("/game/" + f, buf);
+      done++;
+      bar.style.width = String(40 + 55*done/files.length);
+    }
+    msg.textContent = "reincarnating...";
+    bar.style.width = "100%";
+    await pyodide.runPythonAsync(`
+import sys
+sys.path.insert(0, "/game")
+import game_web
+game_web.boot()
+`);
+    const l = document.getElementById("loading");
+    l.style.opacity = "0";
+    setTimeout(()=>l.remove(), 550);
+  } catch (err){
+    msg.textContent = "failed to wake the dragon: " + err.message;
+  }
+}
+boot();
+</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+</body>
+</html>

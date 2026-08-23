@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.pyc
+saves/
+novels_txt/
+EPUB/
+playthrough_out.txt
+playthrough_final.txt
