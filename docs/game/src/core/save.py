@@ -23,6 +23,7 @@ def _write_bytes(path, data: str):
     if _web():
         _ls().setItem(_key(path), data)
         return
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(data)
 
@@ -38,7 +39,9 @@ def _read_bytes(path):
 
 
 def slot_path(slot):
-    return f"slot_{slot}"
+    if _web():
+        return f"slot_{slot}"
+    return os.path.join(SAVE_DIR, f"slot_{slot}.json")
 
 
 def save_game(state, slot=1):

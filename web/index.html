@@ -47,9 +47,10 @@
   <p id="loadmsg">summoning python into your browser...</p>
 </div>
 
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script>
 const term = document.getElementById("term");
-function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function esc(s){ return s.replace(/\x1b/g, "").replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
 function ansiToHtml(s){
   const parts = s.split("\x1b[");
@@ -68,7 +69,7 @@ function ansiToHtml(s){
       if (code === "0") stack.length = 0; else stack.push(code);
     }
     if (stack.length === 0){ out += esc(rest); continue; }
-    const style = stack.map(c=>map[c] ? `color:${map[c]}` : (map[c]||""))
+    const style = stack.map(c=>map[c] ? `color:${map[c]}` : "")
                        .filter(Boolean).join(";");
     out += style ? `<span style="${style}">${esc(rest)}</span>` : esc(rest);
   }
@@ -90,6 +91,9 @@ async function boot(){
   const bar = document.getElementById("bootbar");
   const msg = document.getElementById("loadmsg");
   try {
+    if (typeof loadPyodide === "undefined"){
+      throw new Error("Pyodide runtime failed to download. Check connection/reload.");
+    }
     msg.textContent = "downloading python runtime (~7MB, cached after first load)...";
     pyodide = await loadPyodide();
     bar.style.width = "40%";
@@ -126,6 +130,5 @@ game_web.boot()
 }
 boot();
 </script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 </body>
 </html>
