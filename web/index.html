@@ -100,7 +100,7 @@ os.chdir("/game")`);
     const files = await fetch("files.json").then(r=>r.json());
     let done = 0;
     for (const f of files){
-      const resp = await fetch("/game/" + f);
+      const resp = await fetch("game/" + f);
       if (!resp.ok) throw new Error("missing " + f);
       const buf = new Uint8Array(await resp.arrayBuffer());
       const dir = ("/game/" + f).split("/").slice(0,-1).join("/");

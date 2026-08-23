@@ -1,0 +1,236 @@
+DISTRICTS = {
+    "central": {"name": "Central Plaza", "desc": "The heart of your dominion."},
+    "residential": {"name": "Residential Quarter", "desc": "Where your people sleep."},
+    "industrial": {"name": "Industrial District", "desc": "Forges, barriers, and craft."},
+    "agriculture": {"name": "Agricultural Belt", "desc": "Food for the growing population."},
+    "commercial": {"name": "Commercial Row", "desc": "Trade and coin."},
+    "labyrinth": {"name": "Labyrinth Gate", "desc": "The dungeon as national infrastructure."},
+    "academy": {"name": "Research Academy", "desc": "Knowledge is power."},
+}
+
+DEFAULT_BUILT = ["plaza", "huts", "berry_groves"]
+
+BUILDINGS = {
+    "plaza": {
+        "name": "Village Plaza", "district": "central",
+        "cost_gold": 0, "cost_mats": {}, "days": 0,
+        "desc": "A fire pit, a well, and space to gather.",
+        "effects_text": "+5 base happiness equilibrium.",
+        "happiness_eq": 5,
+    },
+    "guest_house": {
+        "name": "State Guest House", "district": "central",
+        "cost_gold": 250, "cost_mats": {"spider_silk": 2, "magic_crystal_shard": 2}, "days": 3,
+        "requires": ["plaza"],
+        "desc": "Lodging for envoys and traveling dignitaries.",
+        "effects_text": "Diplomacy actions +2 effectiveness, envoy costs -20g.",
+        "diplomacy_bonus": 2,
+    },
+    "banquet_hall": {
+        "name": "Banquet Hall", "district": "central",
+        "cost_gold": 400, "cost_mats": {"timber": 6}, "days": 4,
+        "requires": ["plaza"],
+        "desc": "Feasts build loyalty.",
+        "effects_text": "Festivals +50% effect, +3 happiness equilibrium.",
+        "festival_mult": 1.5, "happiness_eq": 3,
+    },
+    "hot_spring": {
+        "name": "Hot Spring Works", "district": "central",
+        "cost_gold": 500, "cost_mats": {"magic_crystal_shard": 4, "stone": 4}, "days": 4,
+        "requires": ["plaza"],
+        "desc": "Piped thermal waters, courtesy of Shadow Motion engineering.",
+        "effects_text": "Rest heals magicule scars 40% faster. +4 happiness eq.",
+        "scar_mult": 1.4, "happiness_eq": 4,
+    },
+    "colosseum": {
+        "name": "Colosseum", "district": "central",
+        "cost_gold": 800, "cost_mats": {"stone": 8, "magisteel_ore": 3}, "days": 6,
+        "requires": ["plaza"],
+        "desc": "An arena for martial tournaments.",
+        "effects_text": "Tournament events possible. Party ATK +5% in defense of the realm.",
+        "tournaments": True, "party_atk_pct": 0.05,
+    },
+
+    "huts": {
+        "name": "Goblin Huts", "district": "residential",
+        "cost_gold": 0, "cost_mats": {}, "days": 0,
+        "desc": "Crude but home.",
+        "effects_text": "Population cap 150.",
+        "pop_cap": 150,
+    },
+    "longhouses": {
+        "name": "Longhouses", "district": "residential",
+        "cost_gold": 300, "cost_mats": {"timber": 5}, "days": 3,
+        "requires": ["huts"],
+        "desc": "Sturdy communal halls.",
+        "effects_text": "Population cap +250.",
+        "pop_cap": 250,
+    },
+    "stone_homes": {
+        "name": "Stone Homes", "district": "residential",
+        "cost_gold": 700, "cost_mats": {"stone": 10, "magic_crystal_small": 2}, "days": 5,
+        "requires": ["longhouses"],
+        "desc": "Proper houses with proper chimneys.",
+        "effects_text": "Population cap +600, +3 happiness eq.",
+        "pop_cap": 600, "happiness_eq": 3,
+    },
+
+    "forge": {
+        "name": "Kaijin's Forge", "district": "industrial",
+        "cost_gold": 350, "cost_mats": {"magisteel_ore": 1, "magic_crystal_shard": 2}, "days": 3,
+        "desc": "A dwarf-grade smithy. Unlocks crafting.",
+        "effects_text": "Unlocks crafting recipes; smiths convert materials efficiently.",
+        "crafting": True,
+    },
+    "anvil_upgrade": {
+        "name": "Master's Anvil", "district": "industrial",
+        "cost_gold": 600, "cost_mats": {"magisteel_ore": 3, "chitin_plate": 4}, "days": 4,
+        "requires": ["forge"],
+        "desc": "Kurobe-grade equipment.",
+        "effects_text": "Advanced crafting recipes unlocked.",
+        "advanced_crafting": True,
+    },
+    "barrier_generator": {
+        "name": "Barrier Generators", "district": "industrial",
+        "cost_gold": 550, "cost_mats": {"magic_crystal_shard": 6}, "days": 4,
+        "desc": "Anti-magic fields woven along the streets.",
+        "effects_text": "City Defense +30.",
+        "defense": 30,
+    },
+
+    "berry_groves": {
+        "name": "Berry Groves", "district": "agriculture",
+        "cost_gold": 0, "cost_mats": {}, "days": 0,
+        "desc": "Forest bounty, gathered and tended.",
+        "effects_text": "Base food production 75/day.",
+        "food_base": 75,
+    },
+    "farm_plots": {
+        "name": "Farm Plots", "district": "agriculture",
+        "cost_gold": 200, "cost_mats": {"timber": 3}, "days": 2,
+        "requires": ["berry_groves"],
+        "desc": "Tilled earth and planted seed.",
+        "effects_text": "+60 food/day.",
+        "food_base": 60,
+    },
+    "hipokute_fields": {
+        "name": "Hipokute Fields", "district": "agriculture",
+        "cost_gold": 450, "cost_mats": {"hipokute_grass": 10}, "days": 4,
+        "requires": ["farm_plots"],
+        "desc": "Medicinal flowers farmed at scale.",
+        "effects_text": "+80 food/day; 1 hipokute grass delivered to your Stomach daily.",
+        "food_base": 80, "daily_material": "hipokute_grass",
+    },
+    "ranch": {
+        "name": "Beast Ranch", "district": "agriculture",
+        "cost_gold": 600, "cost_mats": {"timber": 6, "spider_silk": 2}, "days": 5,
+        "requires": ["farm_plots"],
+        "desc": "Docile horn-rabbits by the hundred.",
+        "effects_text": "+90 food/day, +15g/day from fur sales.",
+        "food_base": 90, "gold_flat": 15,
+    },
+
+    "market_stall": {
+        "name": "Market Stalls", "district": "commercial",
+        "cost_gold": 150, "cost_mats": {"timber": 2}, "days": 2,
+        "desc": "Honest trade for honest goods.",
+        "effects_text": "+15g/day.",
+        "gold_flat": 15,
+    },
+    "trading_post": {
+        "name": "Trading Post", "district": "commercial",
+        "cost_gold": 400, "cost_mats": {"spider_silk": 3}, "days": 3,
+        "requires": ["market_stall"],
+        "desc": "Caravans need somewhere to stop.",
+        "effects_text": "+35g/day; enables caravan events.",
+        "gold_flat": 35, "caravans": True,
+    },
+    "merchant_guild": {
+        "name": "Merchant Guild Hall", "district": "commercial",
+        "cost_gold": 900, "cost_mats": {"magisteel_ore": 3, "timber": 8}, "days": 5,
+        "requires": ["trading_post"],
+        "desc": "Mjollmile would be proud.",
+        "effects_text": "+80g/day; +1 trade route slot.",
+        "gold_flat": 80, "route_slots": 1,
+    },
+
+    "gate_shrine": {
+        "name": "Dungeon Gate Shrine", "district": "labyrinth",
+        "cost_gold": 500, "cost_mats": {"magic_crystal_shard": 5}, "days": 4,
+        "desc": "Ramiris-flavored dungeon tourism.",
+        "effects_text": "Daily income: 20g + 5g per deepest floor reached.",
+        "labyrinth_income": True,
+    },
+    "guardian_posts": {
+        "name": "Guardian Posts", "district": "labyrinth",
+        "cost_gold": 650, "cost_mats": {"stone": 6, "magic_crystal_small": 2}, "days": 5,
+        "requires": ["gate_shrine"],
+        "desc": "Garrisons watching every stair.",
+        "effects_text": "City Defense +25; recruit pool +1 wanderer daily.",
+        "defense": 25, "recruit_extra": 1,
+    },
+
+    "schoolhouse": {
+        "name": "Schoolhouse", "district": "academy",
+        "cost_gold": 400, "cost_mats": {"timber": 4}, "days": 4,
+        "desc": "Reading, writing, arithmetic - and battle doctrine.",
+        "effects_text": "Enables research points; named allies gain +10% shared XP.",
+        "research": True, "xp_share_bonus": 0.10,
+    },
+    "research_lab": {
+        "name": "Research Laboratory", "district": "academy",
+        "cost_gold": 750, "cost_mats": {"magic_crystal_small": 3, "magisteel_ore": 2}, "days": 6,
+        "requires": ["schoolhouse"],
+        "desc": "Vesta would kill for this funding.",
+        "effects_text": "Research output x1.6.",
+        "research_mult": 1.6,
+    },
+}
+
+CRAFT_RECIPES = [
+    {"id": "high_potion", "out_kind": "consumable", "mats": {"hipokute_grass": 3, "magic_crystal_shard": 1},
+     "requires": [], "tier": 1},
+    {"id": "full_potion", "out_kind": "consumable", "mats": {"hipokute_grass": 8, "serpent_core": 1, "magic_crystal_small": 2},
+     "requires": ["anvil_upgrade"], "tier": 2},
+    {"id": "iron_dagger", "out_kind": "gear", "mats": {"wolf_fang": 2, "magic_crystal_shard": 1}, "requires": ["forge"], "tier": 1},
+    {"id": "steel_saber", "out_kind": "gear", "mats": {"magisteel_ore": 2, "armor_scale": 1}, "requires": ["forge"], "tier": 1},
+    {"id": "leather_armor", "out_kind": "gear", "mats": {"wolf_pelt": 3}, "requires": ["forge"], "tier": 1},
+    {"id": "scale_mail", "out_kind": "gear", "mats": {"armor_scale": 4, "spider_silk": 2}, "requires": ["anvil_upgrade"], "tier": 2},
+]
+
+FACTIONS = {
+    "dwargon": {"name": "Armed Nation of Dwargon", "color": "\033[93m", "start_rel": 10,
+                "blurb": "The dwarf kingdom. Values craftsmanship and honest dealing."},
+    "blumund": {"name": "Kingdom of Blumund", "color": "\033[96m", "start_rel": 0,
+                "blurb": "Small human nation hungry for monster-material trade."},
+    "guild": {"name": "Free Guild", "color": "\033[92m", "start_rel": 5,
+              "blurb": "Adventurers' guild. Interested in dungeon cooperation."},
+    "church": {"name": "Western Holy Church", "color": "\033[91m", "start_rel": -15,
+               "blurb": "They call monsters 'evil'. Relations are... delicate."},
+}
+
+TRADE_ROUTES = {
+    "dwargon_route": {"faction": "dwargon", "name": "Dwargon Arms-for-Ore Pact",
+                      "req_rel": 30, "income": 40,
+                      "desc": "Magicore flows east, masterwork tools flow west."},
+    "blumund_route": {"faction": "blumund", "name": "Blumund Potion Contract",
+                      "req_rel": 25, "income": 30,
+                      "desc": "Healing potions for silver, by the barrel."},
+    "guild_route": {"faction": "guild", "name": "Guild Card Integration",
+                    "req_rel": 40, "income": 25,
+                    "desc": "Adventurer traffic through your lands, fees collected."},
+    "church_route": {"faction": "church", "name": "Church Nonaggression Trade",
+                     "req_rel": 55, "income": 50,
+                     "desc": "An uneasy truce with coins attached."},
+}
+
+RESEARCH_PERKS = [
+    {"id": "logistics", "name": "Logistics Network", "rp": 150,
+     "desc": "Kingdom income +10%.", "income_pct": 0.10},
+    {"id": "fortification", "name": "Fortification Doctrine", "rp": 200,
+     "desc": "City Defense +20.", "defense": 20},
+    {"id": "medicine", "name": "Applied Alchemy", "rp": 250,
+     "desc": "Crafting consumes half materials (rounded up).", "craft_half": True},
+    {"id": "beast_taming", "name": "Soul-Corridor Attunement", "rp": 300,
+     "desc": "All naming costs -20%.", "name_discount": 0.20},
+]
