@@ -10,9 +10,9 @@
   :root {
     --bg: #0a0e14; --pane: #0d1420; --edge: #1d2b3f;
     --gold: #ffd75e; --fg: #cfe3ff;
-    font-size: clamp(11px, 2.6vh, 17px);
+    font-size: clamp(8px, 2.2vw, 17px);
   }
-  @media (orientation: landscape) { :root { font-size: clamp(10px, 2.3vw, 16px); } }
+  @media (orientation: landscape) { :root { font-size: clamp(8px, 1.7vw, 16px); } }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height:100%; background:var(--bg); color:var(--fg);
     font-family:"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace; }
@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.0.5</div></header>
+  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.0.6</div></header>
 <div id="bootbar"></div>
 <main><pre class="term" id="term"></pre></main>
 <div id="loading">
@@ -54,7 +54,7 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script>
-const APP_VERSION = "v1.0.5";
+const APP_VERSION = "v1.0.6";
 document.title = `Tensura ${APP_VERSION}`;
 
 const term = document.getElementById("term");

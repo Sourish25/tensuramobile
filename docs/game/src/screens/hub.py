@@ -143,7 +143,7 @@ async def battle_flow(state, monster_ids, location):
     enemies = [enemy_from_template(mid, scale) for mid in monster_ids]
     allies = naming_sys.party_subs(state)
     b = combat.Battle(h, allies, enemies, location=location)
-    result = b.run()
+    result = await b.run()
     out = {'enemies': enemies, 'result': result['result']}
     if result['result'] == 'win':
         h.kills += len(enemies)
@@ -409,7 +409,7 @@ async def siege_event(state, faction_id):
     if c == 0:
         allies = naming_sys.party_subs(state)
         b = combat.Battle(h, allies, enemies, location='SIEGE OF TEMPEST')
-        result = b.run()
+        result = await b.run()
         win = result['result'] == 'win'
         if win:
             h.kills += len(enemies)

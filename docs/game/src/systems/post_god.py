@@ -87,7 +87,7 @@ async def run_gate(state, offer):
             enemies.append(e)
         allies = naming_sys.party_subs(state)
         b = combat.Battle(h, allies, enemies, location=f"{offer['name']} - Stratum {floor}")
-        result = b.run()
+        result = await b.run()
         if result['result'] != 'win':
             print(ui.R + '\nThe gate expels you, bleeding magicules.' + ui.RESET)
             h.hp = max(1, int(h.max_hp * 0.25))
@@ -104,7 +104,7 @@ async def run_gate(state, offer):
     boss.hp = boss.stats['hp']
     print(f'\n{ui.ENEMY_C}{boss.glyph} {boss.name}{ui.RESET} - {ui.DIM}{boss.desc}{ui.RESET}')
     b = combat.Battle(h, naming_sys.party_subs(state), [boss], location=f"{offer['name'].upper()} - WORLD HEART")
-    result = b.run()
+    result = await b.run()
     if result['result'] != 'win':
         print(ui.R + '\nThe World Heart endures. You are cast out.' + ui.RESET)
         h.hp = max(1, int(h.max_hp * 0.25))

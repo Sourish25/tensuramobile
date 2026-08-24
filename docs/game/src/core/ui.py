@@ -9,7 +9,7 @@ try:
     sys.stdin.reconfigure(encoding='utf-8', errors='replace')
 except Exception:
     pass
-WIDTH = 100
+WIDTH = 64
 R = '\x1b[31m'
 G = '\x1b[32m'
 Y = '\x1b[33m'

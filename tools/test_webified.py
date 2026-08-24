@@ -30,6 +30,8 @@ def run():
         "1",          # race choose
         "WebTest",    # name
     ]
+    # keep answering "1" then Enter: explores, fights battles, accepts defaults
+    answers += ["1", ""] * 30
 
     fake_js = types.ModuleType("js")
 
@@ -75,7 +77,11 @@ def run():
         asyncio.run(game_web.boot())
     except TestDone as e:
         sys.stdout = real_stdout
-        print(f"SMOKE TEST PASS: {e} (after {4 - len(answers)} scripted inputs)")
+        used = 4 + 60 - len(answers)
+        if used < 8:
+            print(f"SMOKE TEST FAIL: only {used} prompts consumed - never left the hub")
+            return 1
+        print(f"SMOKE TEST PASS: {e} (after {used} scripted inputs, battles survived)")
         return 0
     except BaseException as e:
         sys.stdout = real_stdout

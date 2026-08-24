@@ -67,7 +67,7 @@ async def orc_war_event(state):
             b = combat.Battle(h, allies, enemies, location=f'ORC WAR - Wave {i}')
             b.set_incoming_mult(0.75)
             h.barrier_hp = int(h.max_hp * 0.35)
-            result = b.run()
+            result = await b.run()
             win = result['result'] == 'win'
             if win:
                 h.kills += len(enemies)
@@ -194,7 +194,7 @@ async def run_trial(state, trial):
         return
     allies = naming_sys.party_subs(state)
     b = combat.Battle(h, allies, enemies, location=title)
-    result = b.run()
+    result = await b.run()
     if result['result'] != 'win':
         print(ui.R + 'Trial failed. Grow stronger.' + ui.RESET)
         await ui.pause()
@@ -252,7 +252,7 @@ async def empire_wave_event(state):
         allies = naming_sys.party_subs(state)
         b = combat.Battle(h, allies, enemies, location=f'EMPIRE WAR W{wave_no}')
         b.set_incoming_mult(0.75)
-        result = b.run()
+        result = await b.run()
         win = result['result'] == 'win'
         if win:
             h.kills += len(enemies)
