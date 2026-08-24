@@ -101,6 +101,19 @@ function loadScript(src){
   });
 }
 
+function withTimeout(promise, ms, label){
+  let t;
+  const guard = new Promise((_, rej)=>{ t = setTimeout(()=>rej(new Error(label + " timed out")), ms); });
+  return Promise.race([promise, guard]).finally(()=>clearTimeout(t));
+}
+
+async function attemptMirror(base, setMsg){
+  await warmCache(base, setMsg);
+  await loadScript(base + "pyodide.js");
+  if (typeof loadPyodide !== "function") throw new Error("loader missing");
+  return await loadPyodide({ indexURL: base });
+}
+
 async function loadPyodideWithFallback(setMsg){
   const sources = [
     "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/",
@@ -110,16 +123,17 @@ async function loadPyodideWithFallback(setMsg){
   let lastErr = null;
   for (let i=0;i<sources.length;i++){
     const base = sources[i];
+    const host = new URL(base).host;
     try {
-      setMsg(`python runtime ${i+1}/${sources.length} via ${new URL(base).host}`);
-      const ok = await warmCache(base, setMsg);
-      if (!ok) throw new Error("download failed");
-      await loadScript(base + "pyodide.js");
-      if (typeof loadPyodide !== "function") throw new Error("loader missing");
-      return await loadPyodide({ indexURL: base });
-    } catch(e){ lastErr = e; }
+      setMsg(`python runtime ${i+1}/${sources.length} via ${host}`);
+      return await withTimeout(attemptMirror(base, setMsg), 300000, host);
+    } catch(e){
+      lastErr = e;
+      setMsg(`${host}: ${e && e.message ? e.message : e} - trying another mirror...`);
+    }
   }
-  throw lastErr || new Error("all python mirrors failed");
+  throw new Error("could not download the python runtime - check your internet connection" +
+    (lastErr ? ` [${lastErr && lastErr.message ? lastErr.message : lastErr}]` : ""));
 }
 
 async function warmCache(base, setMsg){
@@ -127,8 +141,9 @@ async function warmCache(base, setMsg){
   for (const f of files){
     try {
       const resp = await fetch(base + f);
-      if (!resp.ok) return false;
+      if (!resp.ok) return;
       const total = Number(resp.headers.get("content-length") || 0);
+      if (!resp.body || !resp.body.getReader) return;
       const reader = resp.body.getReader();
       let got = 0;
       while (true){
@@ -140,9 +155,8 @@ async function warmCache(base, setMsg){
         setMsg(`first-time download ${mb} MB${pct} - one time only, stays cached`);
         bar.style.width = String(Math.min(38, 5 + got/(total||12e6)*30));
       }
-    } catch(e){ return false; }
+    } catch(e){ return; }
   }
-  return true;
 }
 
 async function boot(){
