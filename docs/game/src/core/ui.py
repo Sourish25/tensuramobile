@@ -157,6 +157,9 @@ def sage(lines):
     print()
 
 async def menu(prompt, options, allow_cancel=False, cancel_label='Back', color=GOLD_C):
+    from src.core import webbridge
+    if webbridge.WEB:
+        return await webbridge.ask_menu(strip_ansi(prompt), [strip_ansi(o) for o in options], allow_cancel, strip_ansi(cancel_label))
     print(f'{color}{BOLD}{prompt}{RESET}')
     for i, opt in enumerate(options, 1):
         print(f'  {color}{i}.{RESET} {opt}')

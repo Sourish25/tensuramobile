@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#0a0e14">
 <title>Tensura: Path of the Reincarnated</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
   :root {
     --bg: #0a0e14; --pane: #0d1420; --edge: #1d2b3f;
@@ -22,10 +25,35 @@
     border-bottom:1px solid var(--edge); background:var(--pane); flex:0 0 auto; }
   header .t { color:var(--gold); font-weight:700; letter-spacing:.15em; font-size:.85rem; }
   header .s { font-size:.65rem; opacity:.55; letter-spacing:.08em; }
-  #bootbar { height:2px; background:linear-gradient(90deg,#7c4dff,#00e5ff); width:0%; transition:width .4s; }
   main { flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
-    padding:10px 10px calc(env(safe-area-inset-bottom) + 24px); }
+    padding:10px 10px 12px; }
   @media (orientation:landscape) and (min-width:760px){ main{ max-width:112ch; margin:0 auto; width:100%; } }
+  #dock { flex:0 0 auto; border-top:1px solid var(--edge); background:var(--pane);
+    padding:8px 10px calc(env(safe-area-inset-bottom) + 10px);
+    display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow-y:auto; }
+  .rpgpanel { background:#16283e; border:2px solid #3f6fa8; border-radius:8px;
+    padding:8px 10px; font-family:"Press Start 2P","Cascadia Mono",Consolas,monospace;
+    font-size:.68rem; line-height:1.7; box-shadow:0 2px 0 rgba(0,0,0,.4); }
+  .rpgpanel .ttl { color:#8fd3ff; text-align:center; margin-bottom:5px; }
+  .rpgbtn { display:block; width:100%; text-align:center; background:#1d3a5f;
+    color:#eaf4ff; border:1px solid #3f6fa8; border-radius:6px; padding:11px 8px;
+    margin:5px 0; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .rpgbtn:active { background:#2c5688; }
+  .rpgbtn.cancel { background:#3a1d1d; border-color:#a83f3f; color:#ffd9d9; }
+  .bar { height:13px; background:#0a1524; border:1px solid #3f6fa8; border-radius:3px;
+    overflow:hidden; position:relative; margin:3px 0; }
+  .bar > i { display:block; height:100%; background:#e04848; }
+  .bar.mp > i { background:#37c8e8; }
+  .bar span { position:absolute; inset:0; text-align:center; font-size:.55rem;
+    line-height:13px; color:#fff; text-shadow:1px 1px 0 #000; }
+  .ecard { display:flex; align-items:center; gap:9px; background:#101c2c;
+    border:1px solid #3f6fa8; border-radius:6px; padding:7px 9px; margin:5px 0; }
+  .ecard .g { font-size:1.55rem; filter:drop-shadow(0 0 4px rgba(0,0,0,.6)); }
+  .ecard .n { flex:1; min-width:0; }
+  .ecard .nm { color:#fff; margin-bottom:2px; }
+  .ecard .st { color:#ffd75e; font-size:.52rem; margin-top:2px; }
+  .ecard.dead { opacity:.35; }
+  .ecard.boss { border-color:#ffd75e; }
   pre.term { font-family:inherit; font-size:1rem; line-height:1.38;
     white-space:pre-wrap; word-break:break-word; text-shadow:0 0 6px rgba(120,180,255,.12); }
   #loading { position:fixed; inset:0; display:flex; flex-direction:column; gap:16px;
@@ -42,9 +70,9 @@
 </style>
 </head>
 <body>
-  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.0.6</div></header>
-<div id="bootbar"></div>
+  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.1.0</div></header>
 <main><pre class="term" id="term"></pre></main>
+<div id="dock"><div id="hud"></div><div id="ctl"></div></div>
 <div id="loading">
   <h1>TENSURA</h1>
   <div class="spin"></div>
@@ -54,7 +82,7 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script>
-const APP_VERSION = "v1.0.6";
+const APP_VERSION = "v1.1.0";
 document.title = `Tensura ${APP_VERSION}`;
 
 const term = document.getElementById("term");
@@ -84,32 +112,21 @@ function ansiToHtml(s){
   return out + "\n";
 }
 
+const ctl = document.getElementById("ctl");
+const hud = document.getElementById("hud");
+
 function scrollBottom(){
   const m = document.querySelector("main");
   m.scrollTop = m.scrollHeight;
 }
 
-let inpline = null;
-function getInputLine(){
-  if (inpline && inpline.isConnected) return inpline;
-  inpline = document.createElement("span");
-  inpline.className = "inpline";
-  const ps = document.createElement("span");
-  ps.className = "ps1";
-  ps.textContent = "> ";
-  const inp = document.createElement("input");
-  inp.setAttribute("autocapitalize", "off");
-  inp.setAttribute("autocomplete", "off");
-  inp.setAttribute("spellcheck", "false");
-  inp.setAttribute("autocorrect", "off");
-  inp.addEventListener("keydown", (e)=>{
-    if (e.key === "Enter"){ e.preventDefault(); inp.dispatchEvent(new Event("tensura-enter")); }
-  });
-  inpline.appendChild(ps);
-  inpline.appendChild(inp);
-  term.appendChild(inpline);
-  return inpline;
+function echo(s){
+  term.insertAdjacentHTML("beforeend", ansiToHtml(s));
+  scrollBottom();
 }
+
+function setCtl(el){ ctl.replaceChildren(el); return el; }
+function clearCtl(){ ctl.replaceChildren(); }
 
 window.tensuraPush = function(chunk){
   if (!chunk) return;
@@ -117,40 +134,161 @@ window.tensuraPush = function(chunk){
   if (chunk.includes("\x1b[2J")){
     term.innerHTML = "";
     chunk = chunk.replace(/\x1b\[2J/g, "").replace(/\x1b\[H/g, "");
-    getInputLine();
   }
-  const line = getInputLine();
-  if (chunk) line.insertAdjacentHTML("beforebegin", ansiToHtml(chunk));
+  if (chunk) term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
   scrollBottom();
 };
 
-let activePromptHandler = null;
 window.tensuraPrompt = function(text){
   return new Promise((resolve)=>{
-    const line = getInputLine();
-    const inp = line.querySelector("input");
-    if (activePromptHandler){
-      inp.removeEventListener("tensura-enter", activePromptHandler);
-      activePromptHandler = null;
-    }
     const cleaned = (text == null ? "" : String(text)).replace(/\x1b\[[0-9;]*m/g, "");
-    if (cleaned.trim()){
-      line.insertAdjacentHTML("beforebegin", ansiToHtml(cleaned));
-    }
-    const handler = ()=>{
+    const wrap = document.createElement("div");
+    wrap.className = "inpline";
+    const ps = document.createElement("span");
+    ps.className = "ps1";
+    ps.textContent = "> ";
+    const inp = document.createElement("input");
+    inp.setAttribute("autocapitalize", "off");
+    inp.setAttribute("autocomplete", "off");
+    inp.setAttribute("spellcheck", "false");
+    inp.setAttribute("autocorrect", "off");
+    wrap.appendChild(ps);
+    wrap.appendChild(inp);
+    wrap.addEventListener("click", ()=>inp.focus());
+    setCtl(wrap);
+    if (cleaned.trim()) echo(cleaned + "\n");
+    inp.addEventListener("keydown", function h(e){
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      inp.removeEventListener("keydown", h);
       const v = inp.value;
-      inp.value = "";
-      inp.removeEventListener("tensura-enter", handler);
-      activePromptHandler = null;
-      line.insertAdjacentHTML("beforebegin", ansiToHtml("> " + v));
-      scrollBottom();
+      echo("> " + v + "\n");
+      clearCtl();
       resolve(v);
-    };
-    activePromptHandler = handler;
-    inp.addEventListener("tensura-enter", handler);
+    });
     inp.focus();
     scrollBottom();
   });
+};
+
+window.tensuraMenu = function(prompt, options, allowCancel, cancelLabel){
+  return new Promise((resolve)=>{
+    const panel = document.createElement("div");
+    panel.className = "rpgpanel";
+    if (prompt && String(prompt).trim()){
+      const t = document.createElement("div");
+      t.className = "ttl";
+      t.textContent = String(prompt);
+      panel.appendChild(t);
+    }
+    function fin(n, label){
+      echo("> " + label + "\n");
+      clearCtl();
+      resolve(String(n));
+    }
+    const opts = Array.from(options == null ? [] : options);
+    opts.forEach((opt, i)=>{
+      const b = document.createElement("button");
+      b.className = "rpgbtn";
+      b.textContent = (i + 1) + ". " + String(opt);
+      b.addEventListener("click", ()=>fin(i + 1, String(opt)));
+      panel.appendChild(b);
+    });
+    if (allowCancel){
+      const b = document.createElement("button");
+      b.className = "rpgbtn cancel";
+      b.textContent = "0. " + String(cancelLabel || "Back");
+      b.addEventListener("click", ()=>fin(0, String(cancelLabel || "Back")));
+      panel.appendChild(b);
+    }
+    setCtl(panel);
+    scrollBottom();
+  });
+};
+
+window.tensuraPause = function(label){
+  return new Promise((resolve)=>{
+    const b = document.createElement("button");
+    b.className = "rpgbtn";
+    b.textContent = "\u25b8 " + String(label || "Continue");
+    b.addEventListener("click", ()=>{ clearCtl(); resolve(""); });
+    setCtl(b);
+    scrollBottom();
+  });
+};
+
+const ENEMY_ART = [["rat","🐀"],["bat","🦇"],["wolf","🐺"],["spider","🕷"],["slime","🟢"],
+  ["goblin","👺"],["hobgoblin","👺"],["orc","👹"],["ogre","👹"],["kobold","🦎"],
+  ["skeleton","💀"],["zombie","🧟"],["ghost","👻"],["wraith","👻"],["vampire","🧛"],
+  ["troll","🧌"],["demon","😈"],["dragon","🐉"],["drake","🐉"],["wyrm","🐉"],
+  ["snake","🐍"],["serpent","🐍"],["bear","🐻"],["boar","🐗"],["bee","🐝"],["wasp","🐝"],
+  ["mushroom","🍄"],["golem","🗿"],["crab","🦀"],["fish","🐟"],["imp","👺"],
+  ["centipede","🐛"],["beetle","🪲"],["scorpion","🦂"],["ape","🦍"],["tiger","🐅"],
+  ["lion","🦁"],["eagle","🦅"],["hawk","🦅"],["owl","🦉"],["frog","🐸"],["toad","🐸"]];
+function artFor(name){
+  const n = String(name).toLowerCase();
+  for (const [k, v] of ENEMY_ART){ if (n.includes(k)) return v; }
+  return "👹";
+}
+function barHtml(cur, mx, cls){
+  const pct = Math.max(0, Math.min(100, Math.round(cur / Math.max(1, mx) * 100)));
+  return `<div class="bar ${cls || ""}"><i style="width:${pct}%"></i><span>${cur}/${mx}</span></div>`;
+}
+let hudTimer = null;
+window.tensuraBattle = function(json){
+  let d;
+  try { d = JSON.parse(json); } catch(e){ return; }
+  if (hudTimer){ clearTimeout(hudTimer); hudTimer = null; }
+  if (d.final){
+    hudTimer = setTimeout(()=>{ hud.replaceChildren(); }, 1600);
+    return;
+  }
+  hud.replaceChildren();
+  const ep = document.createElement("div");
+  ep.className = "rpgpanel";
+  const t = document.createElement("div");
+  t.className = "ttl";
+  t.textContent = (d.location || "Battle") + (d.round ? " - Round " + d.round : "");
+  ep.appendChild(t);
+  (d.foes || []).forEach((f)=>{
+    const c = document.createElement("div");
+    c.className = "ecard" + (f.alive ? "" : " dead") + (f.boss ? " boss" : "");
+    const g = document.createElement("div");
+    g.className = "g";
+    g.textContent = artFor(f.name);
+    const n = document.createElement("div");
+    n.className = "n";
+    const nm = document.createElement("div");
+    nm.className = "nm";
+    nm.textContent = (f.boss ? "👑 " : "") + f.name + (f.alive ? "" : " (slain)");
+    n.appendChild(nm);
+    n.insertAdjacentHTML("beforeend", barHtml(f.hp, f.max_hp, ""));
+    if (f.status){
+      const s = document.createElement("div");
+      s.className = "st";
+      s.textContent = f.status;
+      n.appendChild(s);
+    }
+    c.appendChild(g);
+    c.appendChild(n);
+    ep.appendChild(c);
+  });
+  hud.appendChild(ep);
+  (d.party || []).forEach((p)=>{
+    const c = document.createElement("div");
+    c.className = "ecard" + (p.alive ? "" : " dead");
+    const n = document.createElement("div");
+    n.className = "n";
+    const nm = document.createElement("div");
+    nm.className = "nm";
+    nm.textContent = (p.hero ? "🗡️ " : "") + p.name;
+    n.appendChild(nm);
+    n.insertAdjacentHTML("beforeend", barHtml(p.hp, p.max_hp, ""));
+    n.insertAdjacentHTML("beforeend", barHtml(p.mp, p.max_mp, "mp"));
+    c.appendChild(n);
+    hud.appendChild(c);
+  });
+  scrollBottom();
 };
 
 function hideLoading(){
@@ -220,20 +358,17 @@ async function warmCache(base, setMsg){
         const mb = (got/1048576).toFixed(1);
         const pct = total ? ` (${Math.round(got/total*100)}%)` : "";
         setMsg(`first-time download ${mb} MB${pct} - one time only, stays cached`);
-        bar.style.width = String(Math.min(38, 5 + got/(total||12e6)*30));
       }
     } catch(e){ return; }
   }
 }
 
 async function boot(){
-  const bar = document.getElementById("bootbar");
   const msg = document.getElementById("loadmsg");
   const ver = document.getElementById("ver");
   if (ver) ver.textContent = APP_VERSION;
   try {
     pyodide = await loadPyodideWithFallback(t=>msg.textContent=t);
-    bar.style.width = "40%";
     msg.textContent = "inscribing world language...";
     pyodide.FS.mkdirTree("/game");
     await pyodide.runPythonAsync(`import sys, os
@@ -252,10 +387,8 @@ os.chdir("/game")`);
       try { pyodide.FS.mkdirTree(dir); } catch(e){}
       pyodide.FS.writeFile("/game/" + f, buf);
       done++;
-      bar.style.width = String(40 + 55*done/files.length);
     }
     msg.textContent = "reincarnating...";
-    bar.style.width = "100%";
     hideLoading();
     await pyodide.runPythonAsync(`
 import sys

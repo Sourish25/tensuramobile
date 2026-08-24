@@ -19,7 +19,7 @@ async def ask_text(label):
 
 async def ask_pause(label):
     if WEB:
-        await ask_line(label if label else 'Press Enter to continue...')
+        await _pause_js(label if label else 'Continue')
         return
     input(label)
 
@@ -53,3 +53,34 @@ async def ask_line(prompt=''):
         v = await tensuraPrompt(prompt)
         return v if v is not None else ''
     return input(prompt)
+
+async def ask_menu(prompt, options, allow_cancel, cancel_label='Back'):
+    if WEB:
+        from js import tensuraMenu
+        v = await tensuraMenu(prompt, list(options), bool(allow_cancel), cancel_label)
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+    while True:
+        raw = input(prompt + ' ' if prompt else '> ')
+        try:
+            n = int(raw)
+        except ValueError:
+            continue
+        if 1 <= n <= len(options):
+            return n
+        if allow_cancel and n == 0:
+            return None
+
+async def _pause_js(label):
+    if WEB:
+        from js import tensuraPause
+        await tensuraPause(label)
+        return
+    input(label)
+
+def push_battle(payload_json):
+    if WEB:
+        from js import tensuraBattle
+        tensuraBattle(payload_json)

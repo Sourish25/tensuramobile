@@ -1,8 +1,9 @@
 """Headless smoke test for the webified payload.
 
-Copies docs/game to a temp dir, injects a fake `js` module whose tensuraPrompt
-returns scripted answers, then runs game_web.boot() under asyncio. Reaching the
-hub menu proves title -> char_create -> hub all work through the async bridge.
+Copies docs/game to a temp dir, injects a fake `js` module (menus, pauses,
+prompts, battle HUD) driven by a scripted answer list, then runs
+game_web.boot() under asyncio. Passing requires surviving character creation
+AND several explore/battle loops through the touch-UI bridge.
 """
 import asyncio
 import shutil
@@ -25,13 +26,21 @@ def run():
     shutil.copytree(payload, dst)
 
     answers = [
-        "1",          # title: New Game
-        "",           # prologue pause (Enter)
-        "1",          # race choose
-        "WebTest",    # name
+        "1",          # title menu: New Game
+        "",           # prologue pause (tap continue)
+        "1",          # race menu
+        "WebTest",    # name prompt
     ]
-    # keep answering "1" then Enter: explores, fights battles, accepts defaults
-    answers += ["1", ""] * 30
+    # keep tapping option 1 + continue: explores, battles, accepts defaults
+    answers += ["1", ""] * 40
+
+    consumed = {"n": 0}
+
+    def take():
+        if not answers:
+            raise TestDone("script exhausted (reached live gameplay)")
+        consumed["n"] += 1
+        return answers.pop(0)
 
     fake_js = types.ModuleType("js")
 
@@ -49,21 +58,31 @@ def run():
             self.store.pop(k, None)
 
     fake_js.localStorage = FakeLocalStorage()
-    fake_js.window = fake_js  # webbridge._js() imports window; self-ref covers .prompt/.alert
+    fake_js.window = fake_js
     fake_js.prompt = lambda *a, **k: None
     fake_js.alert = lambda *a, **k: None
 
     async def tensuraPrompt(prompt=""):
-        if not answers:
-            raise TestDone("script exhausted (reached live gameplay)")
-        v = answers.pop(0)
-        await asyncio.sleep(0)
-        return v
+        return take()
+
+    async def tensuraMenu(prompt="", options=None, allow_cancel=False,
+                          cancel_label="Back"):
+        return take()
+
+    async def tensuraPause(label=""):
+        take()
+        return ""
+
+    def tensuraBattle(payload_json=""):
+        pass
 
     def tensuraPush(chunk=""):
         pass
 
     fake_js.tensuraPrompt = tensuraPrompt
+    fake_js.tensuraMenu = tensuraMenu
+    fake_js.tensuraPause = tensuraPause
+    fake_js.tensuraBattle = tensuraBattle
     fake_js.tensuraPush = tensuraPush
     sys.modules["js"] = fake_js
 
@@ -77,11 +96,12 @@ def run():
         asyncio.run(game_web.boot())
     except TestDone as e:
         sys.stdout = real_stdout
-        used = 4 + 60 - len(answers)
-        if used < 8:
-            print(f"SMOKE TEST FAIL: only {used} prompts consumed - never left the hub")
+        used = consumed["n"]
+        if used < 10:
+            print(f"SMOKE TEST FAIL: only {used} interactions - never got "
+                  f"deep into gameplay")
             return 1
-        print(f"SMOKE TEST PASS: {e} (after {used} scripted inputs, battles survived)")
+        print(f"SMOKE TEST PASS: {e} ({used} interactions, battles survived)")
         return 0
     except BaseException as e:
         sys.stdout = real_stdout

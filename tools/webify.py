@@ -20,6 +20,8 @@ SEEDS = {
     "src.core.webbridge:ask_pause",
     "src.core.webbridge:ask_int",
     "src.core.webbridge:ask_line",
+    "src.core.webbridge:ask_menu",
+    "src.core.webbridge:_pause_js",
     "src.screens.hub:_run_action",
 }
 
@@ -31,7 +33,7 @@ TEXT_PATCHES = {
         ),
         (
             '        if label:\n            _js().alert(label.replace("\\x1b", ""))\n        return',
-            '        ask_line(label if label else "Press Enter to continue...")\n        return',
+            '        _pause_js(label if label else "Continue")\n        return',
         ),
         (
             '            raw = w.prompt(f"{prompt} [{lo}-{hi}]")',
@@ -42,6 +44,15 @@ TEXT_PATCHES = {
         (
             "WIDTH = 100",
             "WIDTH = 64",
+        ),
+        (
+            'def menu(prompt, options, allow_cancel=False, cancel_label="Back", color=GOLD_C):\n'
+            '    print(f"{color}{BOLD}{prompt}{RESET}")',
+            'def menu(prompt, options, allow_cancel=False, cancel_label="Back", color=GOLD_C):\n'
+            "    from src.core import webbridge\n"
+            "    if webbridge.WEB:\n"
+            "        return webbridge.ask_menu(strip_ansi(prompt), [strip_ansi(o) for o in options], allow_cancel, strip_ansi(cancel_label))\n"
+            '    print(f"{color}{BOLD}{prompt}{RESET}")',
         ),
         (
             '            raw = w.prompt(body + "\\n\\nEnter number:")',
@@ -61,6 +72,34 @@ TEXT_PATCHES = {
             "        _run_action(actions[c][1])",
         ),
     ],
+    "src/systems/combat.py": [
+        (
+            '    def draw(self, final=False):\n'
+            "        ui.clear()\n"
+            '        ui.header(f"{self.location} - Round {self.round_no}", f"{len(self.foes)} enemies")',
+            '    def draw(self, final=False):\n'
+            "        from src.core import webbridge\n"
+            "        if webbridge.WEB:\n"
+            "            import json as _json\n"
+            "            foes = []\n"
+            "            for i, e in enumerate(self.enemies, 1):\n"
+            '                foes.append({"idx": i, "name": e.name, "glyph": getattr(e, "glyph", "?"), "hp": max(0, int(e.hp)), "max_hp": max(1, int(e.max_hp)), "alive": bool(e.alive), "boss": bool(getattr(e, "is_boss", False)), "status": " ".join(k.upper() for k in getattr(e, "status", {}))})\n'
+            "            party = []\n"
+            "            for u, is_hero in [(self.hero, True)] + [(a, False) for a in self.allies]:\n"
+            '                party.append({"name": u.name, "glyph": getattr(u, "glyph", "?"), "hp": max(0, int(u.hp)), "max_hp": max(1, int(u.max_hp)), "mp": max(0, int(u.mp)), "max_mp": max(1, int(u.max_mp)), "alive": bool(u.alive), "hero": bool(is_hero)})\n'
+            '            webbridge.push_battle(_json.dumps({"round": int(self.round_no), "location": self.location, "foes": foes, "party": party, "final": bool(final)}))\n'
+            "            if final:\n"
+            "                self.log.flush()\n"
+            "            else:\n"
+            "                shown = self.log.lines[-5:]\n"
+            "                for ln in shown:\n"
+            '                    print(" " + ln[: ui.WIDTH - 4])\n'
+            "                print()\n"
+            "            return\n"
+            "        ui.clear()\n"
+            '        ui.header(f"{self.location} - Round {self.round_no}", f"{len(self.foes)} enemies")',
+        ),
+    ],
 }
 
 ASK_LINE = '''
@@ -71,6 +110,46 @@ async def ask_line(prompt=""):
         v = await tensuraPrompt(prompt)
         return v if v is not None else ""
     return input(prompt)
+'''
+
+ASK_MENU = '''
+
+async def ask_menu(prompt, options, allow_cancel, cancel_label="Back"):
+    if WEB:
+        from js import tensuraMenu
+        v = await tensuraMenu(prompt, list(options), bool(allow_cancel), cancel_label)
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+    while True:
+        raw = input((prompt + " ") if prompt else "> ")
+        try:
+            n = int(raw)
+        except ValueError:
+            continue
+        if 1 <= n <= len(options):
+            return n
+        if allow_cancel and n == 0:
+            return None
+'''
+
+PAUSE_JS = '''
+
+async def _pause_js(label):
+    if WEB:
+        from js import tensuraPause
+        await tensuraPause(label)
+        return
+    input(label)
+'''
+
+PUSH_BATTLE = '''
+
+def push_battle(payload_json):
+    if WEB:
+        from js import tensuraBattle
+        tensuraBattle(payload_json)
 '''
 
 HUB_RUN_ACTION = '''
@@ -340,7 +419,7 @@ def webify_all(root):
                 sys.exit(f"webify: patch MISS in {rel}: {old[:60]!r}")
             src = src.replace(old, new)
         if rel == "src/core/webbridge.py":
-            src += ASK_LINE
+            src += ASK_LINE + ASK_MENU + PAUSE_JS + PUSH_BATTLE
         if rel == "src/screens/hub.py":
             src += HUB_RUN_ACTION
         mods[mod] = _Info(rel, ast.parse(src))

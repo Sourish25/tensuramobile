@@ -195,6 +195,24 @@ class Battle:
             self.result = 'lose'
 
     def draw(self, final=False):
+        from src.core import webbridge
+        if webbridge.WEB:
+            import json as _json
+            foes = []
+            for i, e in enumerate(self.enemies, 1):
+                foes.append({'idx': i, 'name': e.name, 'glyph': getattr(e, 'glyph', '?'), 'hp': max(0, int(e.hp)), 'max_hp': max(1, int(e.max_hp)), 'alive': bool(e.alive), 'boss': bool(getattr(e, 'is_boss', False)), 'status': ' '.join((k.upper() for k in getattr(e, 'status', {})))})
+            party = []
+            for u, is_hero in [(self.hero, True)] + [(a, False) for a in self.allies]:
+                party.append({'name': u.name, 'glyph': getattr(u, 'glyph', '?'), 'hp': max(0, int(u.hp)), 'max_hp': max(1, int(u.max_hp)), 'mp': max(0, int(u.mp)), 'max_mp': max(1, int(u.max_mp)), 'alive': bool(u.alive), 'hero': bool(is_hero)})
+            webbridge.push_battle(_json.dumps({'round': int(self.round_no), 'location': self.location, 'foes': foes, 'party': party, 'final': bool(final)}))
+            if final:
+                self.log.flush()
+            else:
+                shown = self.log.lines[-5:]
+                for ln in shown:
+                    print(' ' + ln[:ui.WIDTH - 4])
+                print()
+            return
         ui.clear()
         ui.header(f'{self.location} - Round {self.round_no}', f'{len(self.foes)} enemies')
         foe_lines = []
