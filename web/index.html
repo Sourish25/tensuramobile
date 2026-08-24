@@ -82,6 +82,7 @@ function ansiToHtml(s){
 
 window.tensuraPush = function(chunk){
   if (!chunk) return;
+  hideLoading();
   term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
   const m = document.querySelector("main");
   m.scrollTop = m.scrollHeight;
@@ -90,6 +91,11 @@ window.tensuraPrompt = function(text){
   const cleaned = text.replace(/\x1b\[[0-9;]*m/g, "");
   return window.prompt(cleaned);
 };
+
+function hideLoading(){
+  const l = document.getElementById("loading");
+  if (l){ l.style.opacity = "0"; setTimeout(()=>l.remove(), 300); }
+}
 
 function loadScript(src){
   return new Promise((resolve, reject)=>{
@@ -189,19 +195,24 @@ os.chdir("/game")`);
     }
     msg.textContent = "reincarnating...";
     bar.style.width = "100%";
+    hideLoading();
     await pyodide.runPythonAsync(`
 import sys
 sys.path.insert(0, "/game")
 import game_web
 game_web.boot()
 `);
-    const l = document.getElementById("loading");
-    l.style.opacity = "0";
-    setTimeout(()=>l.remove(), 550);
   } catch (err){
-    msg.textContent = "failed to wake the dragon: " + (err && err.message ? err.message : err);
-    const pre = document.getElementById("errdetail");
-    if (pre) pre.textContent = (err && err.stack) ? String(err.stack).slice(0, 900) : "";
+    const text = "BOOT ERROR: " + (err && err.message ? err.message : err) +
+      "\n" + ((err && err.stack) ? String(err.stack).slice(0, 900) : "");
+    const l = document.getElementById("loading");
+    if (l){
+      msg.textContent = "failed to wake the dragon: " + (err && err.message ? err.message : err);
+      const pre = document.getElementById("errdetail");
+      if (pre) pre.textContent = (err && err.stack) ? String(err.stack).slice(0, 900) : "";
+    } else {
+      window.tensuraPush("\n" + text + "\n");
+    }
   }
 }
 boot();
