@@ -50,46 +50,7 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script>
-const term = document.getElementById("term");
-function esc(s){ return s.replace(/\x1b/g, "").replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
-
-function ansiToHtml(s){
-  const parts = s.split("\x1b[");
-  let out = esc(parts.shift());
-  const stack = [];
-  const map = {"1":"font-weight:bold","3":"font-style:italic","2":"opacity:.55",
-    "31":"#ff6b6b","32":"#69db7c","33":"#ffd75e","34":"#74c0fc",
-    "35":"#e599f7","36":"#66d9e8","37":"#cfe3ff",
-    "91":"#ff8787","92":"#8ce99a","93":"#ffe066","94":"#a5d8ff",
-    "95":"#eebefa","96":"#99e9f2","97":"#ffffff"};
-  for (const part of parts){
-    const m = part.match(/^([0-9;]*)m/);
-    if (!m){ out += esc(part); continue; }
-    const rest = part.slice(m[0].length);
-    for (const code of m[1].split(";").filter(x=>x!=="")){
-      if (code === "0") stack.length = 0; else stack.push(code);
-    }
-    if (stack.length === 0){ out += esc(rest); continue; }
-    const style = stack.map(c=>map[c] ? `color:${map[c]}` : "")
-                       .filter(Boolean).join(";");
-    out += style ? `<span style="${style}">${esc(rest)}</span>` : esc(rest);
-  }
-  return out + "\n";
-}
-
-window.tensuraPush = function(chunk){
-  if (!chunk) return;
-  term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
-  const m = document.querySelector("main");
-  m.scrollTop = m.scrollHeight;
-};
-window.tensuraPrompt = function(text){
-  const cleaned = text.replace(/\x1b\[[0-9;]*m/g, "");
-  return window.prompt(cleaned);
-};
-
-<script>
-const APP_VERSION = "v1.0.3";
+const APP_VERSION = "v1.0.4";
 document.title = `Tensura ${APP_VERSION}`;
 
 const term = document.getElementById("term");
