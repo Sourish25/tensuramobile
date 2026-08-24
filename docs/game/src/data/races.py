@@ -1,104 +1,14 @@
-RACES = {
-    "slime": {
-        "name": "Slime",
-        "glyph": "o",
-        "color": "blue",
-        "desc": "The weakest monster on paper. Endless potential through devouring.",
-        "intrinsics": ["absorb", "dissolve", "self_regen"],
-        "latent_unique": ["great_sage", "predator"],
-        "latent_level": 3,
-        "growth": {"hp": 7, "mp": 9, "atk": 2, "def": 2, "mag": 3, "spr": 3, "agi": 3, "luk": 1},
-        "base": {"hp": 45, "mp": 40, "atk": 8, "def": 6, "mag": 10, "spr": 8, "agi": 10, "luk": 8},
-        "evolution": [
-            {"stage": "Named Slime", "level": 10, "mult": {"hp": 1.5, "mp": 1.5, "atk": 1.4, "def": 1.4, "mag": 1.5, "spr": 1.4}, "grant": ["magic_sense"], "desc": "A name burns itself into your core."},
-            {"stage": "Demon Slime", "level": 25, "mult": {"hp": 1.8, "mp": 1.8, "atk": 1.6, "def": 1.6, "mag": 1.7, "spr": 1.7}, "grant": ["gravity_flight"], "desc": "Material and spiritual bodies freely transformable."},
-            {"stage": "Ultimate Slime", "level": 45, "mult": {"hp": 2.0, "mp": 2.0, "atk": 1.8, "def": 1.8, "mag": 2.0, "spr": 2.0}, "grant": [], "desc": "An existence that bends the laws of the world."},
-            {"stage": "True Dragon-tier", "level": 65, "mult": {"hp": 3.0, "mp": 3.0, "atk": 2.5, "def": 2.5, "mag": 3.0, "spr": 3.0}, "grant": [], "desc": "The fifth dragon awakens in your form."},
-            {"stage": "God-tier", "level": 90, "mult": {"hp": 5.0, "mp": 5.0, "atk": 4.0, "def": 4.0, "mag": 5.0, "spr": 5.0}, "grant": [], "desc": "Rival of the Star-King Dragon himself."},
-        ],
-    },
-    "goblin": {
-        "name": "Goblin",
-        "glyph": "g",
-        "color": "green",
-        "desc": "Frail and feeble, but leadership runs in your blood. Your people grow with you.",
-        "intrinsics": ["night_vision", "vigor"],
-        "latent_unique": ["born_leader"],
-        "latent_level": 3,
-        "growth": {"hp": 6, "mp": 6, "atk": 3, "def": 2, "mag": 2, "spr": 2, "agi": 3, "luk": 1},
-        "base": {"hp": 50, "mp": 30, "atk": 11, "def": 8, "mag": 6, "spr": 6, "agi": 10, "luk": 6},
-        "evolution": [
-            {"stage": "Hobgoblin", "level": 8, "mult": {"hp": 1.5, "mp": 1.3, "atk": 1.5, "def": 1.4, "mag": 1.3, "spr": 1.3}, "grant": [], "desc": "Your frame stretches taller and harder."},
-            {"stage": "Hobgoblin Elite", "level": 20, "mult": {"hp": 1.6, "mp": 1.4, "atk": 1.6, "def": 1.5, "mag": 1.4, "spr": 1.5}, "grant": [], "desc": "A veteran among your kind."},
-            {"stage": "Goblin King", "level": 35, "mult": {"hp": 2.0, "mp": 1.8, "atk": 1.9, "def": 1.8, "mag": 1.8, "spr": 1.8}, "grant": [], "desc": "Crowned ruler of goblinkind."},
-            {"stage": "Ogre Mage-tier", "level": 55, "mult": {"hp": 2.5, "mp": 2.2, "atk": 2.3, "def": 2.2, "mag": 2.4, "spr": 2.2}, "grant": ["flame_aura"], "desc": "Beyond your species' ceiling."},
-            {"stage": "Oni King", "level": 85, "mult": {"hp": 4.0, "mp": 3.5, "atk": 3.8, "def": 3.5, "mag": 3.8, "spr": 3.6}, "grant": [], "desc": "A spiritual life-form of legend."},
-        ],
-    },
-    "lizardman": {
-        "name": "Lizardman",
-        "glyph": "z",
-        "color": "cyan",
-        "desc": "A warrior of the lake tribe. The dragon blood sleeps in your scales.",
-        "intrinsics": ["scale_body", "swim"],
-        "latent_unique": ["tyrant_edge"],
-        "latent_level": 3,
-        "growth": {"hp": 8, "mp": 6, "atk": 4, "def": 3, "mag": 2, "spr": 2, "agi": 3, "luk": 1},
-        "base": {"hp": 60, "mp": 28, "atk": 13, "def": 10, "mag": 6, "spr": 7, "agi": 9, "luk": 6},
-        "evolution": [
-            {"stage": "Dragonewt", "level": 12, "mult": {"hp": 1.6, "mp": 1.5, "atk": 1.6, "def": 1.5, "mag": 1.5, "spr": 1.5}, "grant": ["gravity_flight", "water_blade"], "desc": "Dragon wings sprout from your back."},
-            {"stage": "Dragon Warrior", "level": 28, "mult": {"hp": 1.8, "mp": 1.6, "atk": 1.8, "def": 1.7, "mag": 1.6, "spr": 1.7}, "grant": [], "desc": "Your breath carries lightning."},
-            {"stage": "Dragon Lord-tier", "level": 50, "mult": {"hp": 2.4, "mp": 2.0, "atk": 2.4, "def": 2.2, "mag": 2.0, "spr": 2.2}, "grant": [], "desc": "A sovereign among dragonewts."},
-            {"stage": "Storm Dragon-blooded", "level": 80, "mult": {"hp": 4.0, "mp": 3.5, "atk": 3.8, "def": 3.6, "mag": 3.5, "spr": 3.5}, "grant": [], "desc": "Veldora's element flows in your veins."},
-        ],
-    },
-    "ogre": {
-        "name": "Ogre",
-        "glyph": "O",
-        "color": "red",
-        "desc": "A towering brute with a warrior's heart. Slow to start, devastating at peak.",
-        "intrinsics": ["monstrous_str", "fear_aura"],
-        "latent_unique": ["berserker"],
-        "latent_level": 4,
-        "growth": {"hp": 10, "mp": 4, "atk": 5, "def": 4, "mag": 1, "spr": 2, "agi": 2, "luk": 1},
-        "base": {"hp": 75, "mp": 22, "atk": 16, "def": 11, "mag": 4, "spr": 6, "agi": 7, "luk": 5},
-        "evolution": [
-            {"stage": "Kijin", "level": 12, "mult": {"hp": 1.5, "mp": 1.6, "atk": 1.6, "def": 1.5, "mag": 1.8, "spr": 1.5}, "grant": [], "desc": "Your body refines into humanoid grace and power."},
-            {"stage": "Oni", "level": 30, "mult": {"hp": 1.8, "mp": 1.8, "atk": 1.8, "def": 1.7, "mag": 1.8, "spr": 1.8}, "grant": ["flame_aura"], "desc": "A spiritual life-form wreathed in battle aura."},
-            {"stage": "Awakened Oni", "level": 52, "mult": {"hp": 2.4, "mp": 2.2, "atk": 2.4, "def": 2.2, "mag": 2.2, "spr": 2.2}, "grant": [], "desc": "Disaster-class. Nations tremble at your name."},
-            {"stage": "Flame General-tier", "level": 82, "mult": {"hp": 4.0, "mp": 3.5, "atk": 4.0, "def": 3.6, "mag": 3.5, "spr": 3.5}, "grant": ["hellflare"], "desc": "Commander of infernos."},
-        ],
-    },
-    "direwolf": {
-        "name": "Direwolf",
-        "glyph": "w",
-        "color": "magenta",
-        "desc": "A pack hunter with instincts honed by a thousand chases.",
-        "intrinsics": ["scent_track", "sprint"],
-        "latent_unique": ["hunter_instinct"],
-        "latent_level": 3,
-        "growth": {"hp": 7, "mp": 5, "atk": 4, "def": 2, "mag": 2, "spr": 2, "agi": 5, "luk": 1},
-        "base": {"hp": 52, "mp": 26, "atk": 13, "def": 7, "mag": 6, "spr": 6, "agi": 14, "luk": 7},
-        "evolution": [
-            {"stage": "Tempest Wolf", "level": 10, "mult": {"hp": 1.5, "mp": 1.5, "atk": 1.6, "def": 1.4, "mag": 1.5, "spr": 1.5}, "grant": ["wind_cutter"], "desc": "Storm winds ride beneath your paws."},
-            {"stage": "Star Wolf", "level": 24, "mult": {"hp": 1.7, "mp": 1.6, "atk": 1.7, "def": 1.6, "mag": 1.6, "spr": 1.6}, "grant": [], "desc": "A star-shaped birthmark crowns your brow."},
-            {"stage": "Divine Wolf", "level": 46, "mult": {"hp": 2.3, "mp": 2.1, "atk": 2.3, "def": 2.1, "mag": 2.1, "spr": 2.1}, "grant": ["lightning_bolt"], "desc": "Heaven's hound."},
-            {"stage": "Sky Raptor-tier", "level": 78, "mult": {"hp": 3.8, "mp": 3.2, "atk": 3.8, "def": 3.2, "mag": 3.2, "spr": 3.2}, "grant": ["gravity_flight"], "desc": "You hunt between clouds."},
-        ],
-    },
-}
-
-COLORS = {"blue": "\033[94m", "green": "\033[92m", "cyan": "\033[96m", "red": "\033[91m", "magenta": "\033[95m"}
-
+# auto-webified build (async input bridge) - do not edit
+RACES = {'slime': {'name': 'Slime', 'glyph': 'o', 'color': 'blue', 'desc': 'The weakest monster on paper. Endless potential through devouring.', 'intrinsics': ['absorb', 'dissolve', 'self_regen'], 'latent_unique': ['great_sage', 'predator'], 'latent_level': 3, 'growth': {'hp': 7, 'mp': 9, 'atk': 2, 'def': 2, 'mag': 3, 'spr': 3, 'agi': 3, 'luk': 1}, 'base': {'hp': 45, 'mp': 40, 'atk': 8, 'def': 6, 'mag': 10, 'spr': 8, 'agi': 10, 'luk': 8}, 'evolution': [{'stage': 'Named Slime', 'level': 10, 'mult': {'hp': 1.5, 'mp': 1.5, 'atk': 1.4, 'def': 1.4, 'mag': 1.5, 'spr': 1.4}, 'grant': ['magic_sense'], 'desc': 'A name burns itself into your core.'}, {'stage': 'Demon Slime', 'level': 25, 'mult': {'hp': 1.8, 'mp': 1.8, 'atk': 1.6, 'def': 1.6, 'mag': 1.7, 'spr': 1.7}, 'grant': ['gravity_flight'], 'desc': 'Material and spiritual bodies freely transformable.'}, {'stage': 'Ultimate Slime', 'level': 45, 'mult': {'hp': 2.0, 'mp': 2.0, 'atk': 1.8, 'def': 1.8, 'mag': 2.0, 'spr': 2.0}, 'grant': [], 'desc': 'An existence that bends the laws of the world.'}, {'stage': 'True Dragon-tier', 'level': 65, 'mult': {'hp': 3.0, 'mp': 3.0, 'atk': 2.5, 'def': 2.5, 'mag': 3.0, 'spr': 3.0}, 'grant': [], 'desc': 'The fifth dragon awakens in your form.'}, {'stage': 'God-tier', 'level': 90, 'mult': {'hp': 5.0, 'mp': 5.0, 'atk': 4.0, 'def': 4.0, 'mag': 5.0, 'spr': 5.0}, 'grant': [], 'desc': 'Rival of the Star-King Dragon himself.'}]}, 'goblin': {'name': 'Goblin', 'glyph': 'g', 'color': 'green', 'desc': 'Frail and feeble, but leadership runs in your blood. Your people grow with you.', 'intrinsics': ['night_vision', 'vigor'], 'latent_unique': ['born_leader'], 'latent_level': 3, 'growth': {'hp': 6, 'mp': 6, 'atk': 3, 'def': 2, 'mag': 2, 'spr': 2, 'agi': 3, 'luk': 1}, 'base': {'hp': 50, 'mp': 30, 'atk': 11, 'def': 8, 'mag': 6, 'spr': 6, 'agi': 10, 'luk': 6}, 'evolution': [{'stage': 'Hobgoblin', 'level': 8, 'mult': {'hp': 1.5, 'mp': 1.3, 'atk': 1.5, 'def': 1.4, 'mag': 1.3, 'spr': 1.3}, 'grant': [], 'desc': 'Your frame stretches taller and harder.'}, {'stage': 'Hobgoblin Elite', 'level': 20, 'mult': {'hp': 1.6, 'mp': 1.4, 'atk': 1.6, 'def': 1.5, 'mag': 1.4, 'spr': 1.5}, 'grant': [], 'desc': 'A veteran among your kind.'}, {'stage': 'Goblin King', 'level': 35, 'mult': {'hp': 2.0, 'mp': 1.8, 'atk': 1.9, 'def': 1.8, 'mag': 1.8, 'spr': 1.8}, 'grant': [], 'desc': 'Crowned ruler of goblinkind.'}, {'stage': 'Ogre Mage-tier', 'level': 55, 'mult': {'hp': 2.5, 'mp': 2.2, 'atk': 2.3, 'def': 2.2, 'mag': 2.4, 'spr': 2.2}, 'grant': ['flame_aura'], 'desc': "Beyond your species' ceiling."}, {'stage': 'Oni King', 'level': 85, 'mult': {'hp': 4.0, 'mp': 3.5, 'atk': 3.8, 'def': 3.5, 'mag': 3.8, 'spr': 3.6}, 'grant': [], 'desc': 'A spiritual life-form of legend.'}]}, 'lizardman': {'name': 'Lizardman', 'glyph': 'z', 'color': 'cyan', 'desc': 'A warrior of the lake tribe. The dragon blood sleeps in your scales.', 'intrinsics': ['scale_body', 'swim'], 'latent_unique': ['tyrant_edge'], 'latent_level': 3, 'growth': {'hp': 8, 'mp': 6, 'atk': 4, 'def': 3, 'mag': 2, 'spr': 2, 'agi': 3, 'luk': 1}, 'base': {'hp': 60, 'mp': 28, 'atk': 13, 'def': 10, 'mag': 6, 'spr': 7, 'agi': 9, 'luk': 6}, 'evolution': [{'stage': 'Dragonewt', 'level': 12, 'mult': {'hp': 1.6, 'mp': 1.5, 'atk': 1.6, 'def': 1.5, 'mag': 1.5, 'spr': 1.5}, 'grant': ['gravity_flight', 'water_blade'], 'desc': 'Dragon wings sprout from your back.'}, {'stage': 'Dragon Warrior', 'level': 28, 'mult': {'hp': 1.8, 'mp': 1.6, 'atk': 1.8, 'def': 1.7, 'mag': 1.6, 'spr': 1.7}, 'grant': [], 'desc': 'Your breath carries lightning.'}, {'stage': 'Dragon Lord-tier', 'level': 50, 'mult': {'hp': 2.4, 'mp': 2.0, 'atk': 2.4, 'def': 2.2, 'mag': 2.0, 'spr': 2.2}, 'grant': [], 'desc': 'A sovereign among dragonewts.'}, {'stage': 'Storm Dragon-blooded', 'level': 80, 'mult': {'hp': 4.0, 'mp': 3.5, 'atk': 3.8, 'def': 3.6, 'mag': 3.5, 'spr': 3.5}, 'grant': [], 'desc': "Veldora's element flows in your veins."}]}, 'ogre': {'name': 'Ogre', 'glyph': 'O', 'color': 'red', 'desc': "A towering brute with a warrior's heart. Slow to start, devastating at peak.", 'intrinsics': ['monstrous_str', 'fear_aura'], 'latent_unique': ['berserker'], 'latent_level': 4, 'growth': {'hp': 10, 'mp': 4, 'atk': 5, 'def': 4, 'mag': 1, 'spr': 2, 'agi': 2, 'luk': 1}, 'base': {'hp': 75, 'mp': 22, 'atk': 16, 'def': 11, 'mag': 4, 'spr': 6, 'agi': 7, 'luk': 5}, 'evolution': [{'stage': 'Kijin', 'level': 12, 'mult': {'hp': 1.5, 'mp': 1.6, 'atk': 1.6, 'def': 1.5, 'mag': 1.8, 'spr': 1.5}, 'grant': [], 'desc': 'Your body refines into humanoid grace and power.'}, {'stage': 'Oni', 'level': 30, 'mult': {'hp': 1.8, 'mp': 1.8, 'atk': 1.8, 'def': 1.7, 'mag': 1.8, 'spr': 1.8}, 'grant': ['flame_aura'], 'desc': 'A spiritual life-form wreathed in battle aura.'}, {'stage': 'Awakened Oni', 'level': 52, 'mult': {'hp': 2.4, 'mp': 2.2, 'atk': 2.4, 'def': 2.2, 'mag': 2.2, 'spr': 2.2}, 'grant': [], 'desc': 'Disaster-class. Nations tremble at your name.'}, {'stage': 'Flame General-tier', 'level': 82, 'mult': {'hp': 4.0, 'mp': 3.5, 'atk': 4.0, 'def': 3.6, 'mag': 3.5, 'spr': 3.5}, 'grant': ['hellflare'], 'desc': 'Commander of infernos.'}]}, 'direwolf': {'name': 'Direwolf', 'glyph': 'w', 'color': 'magenta', 'desc': 'A pack hunter with instincts honed by a thousand chases.', 'intrinsics': ['scent_track', 'sprint'], 'latent_unique': ['hunter_instinct'], 'latent_level': 3, 'growth': {'hp': 7, 'mp': 5, 'atk': 4, 'def': 2, 'mag': 2, 'spr': 2, 'agi': 5, 'luk': 1}, 'base': {'hp': 52, 'mp': 26, 'atk': 13, 'def': 7, 'mag': 6, 'spr': 6, 'agi': 14, 'luk': 7}, 'evolution': [{'stage': 'Tempest Wolf', 'level': 10, 'mult': {'hp': 1.5, 'mp': 1.5, 'atk': 1.6, 'def': 1.4, 'mag': 1.5, 'spr': 1.5}, 'grant': ['wind_cutter'], 'desc': 'Storm winds ride beneath your paws.'}, {'stage': 'Star Wolf', 'level': 24, 'mult': {'hp': 1.7, 'mp': 1.6, 'atk': 1.7, 'def': 1.6, 'mag': 1.6, 'spr': 1.6}, 'grant': [], 'desc': 'A star-shaped birthmark crowns your brow.'}, {'stage': 'Divine Wolf', 'level': 46, 'mult': {'hp': 2.3, 'mp': 2.1, 'atk': 2.3, 'def': 2.1, 'mag': 2.1, 'spr': 2.1}, 'grant': ['lightning_bolt'], 'desc': "Heaven's hound."}, {'stage': 'Sky Raptor-tier', 'level': 78, 'mult': {'hp': 3.8, 'mp': 3.2, 'atk': 3.8, 'def': 3.2, 'mag': 3.2, 'spr': 3.2}, 'grant': ['gravity_flight'], 'desc': 'You hunt between clouds.'}]}}
+COLORS = {'blue': '\x1b[94m', 'green': '\x1b[92m', 'cyan': '\x1b[96m', 'red': '\x1b[91m', 'magenta': '\x1b[95m'}
 
 def get_race(rid):
     return RACES[rid]
 
-
 def evolution_stage(rid, level):
     r = RACES[rid]
-    stage = {"name": r["name"], "mult": {}, "grants": []}
-    for evo in r["evolution"]:
-        if level >= evo["level"]:
-            stage = {"name": evo["stage"], "mult": evo["mult"], "grants": evo.get("grant", [])}
+    stage = {'name': r['name'], 'mult': {}, 'grants': []}
+    for evo in r['evolution']:
+        if level >= evo['level']:
+            stage = {'name': evo['stage'], 'mult': evo['mult'], 'grants': evo.get('grant', [])}
     return stage

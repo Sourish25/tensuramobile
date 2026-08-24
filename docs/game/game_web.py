@@ -1,32 +1,31 @@
+# auto-webified build (async input bridge) - do not edit
 import sys
-
 from src.core import webbridge
 webbridge.set_web(True)
 
-
 class JsStream:
+
     def __init__(self):
         self.buf = []
 
     def write(self, s):
         self.buf.append(s)
-        if "\n" in s:
+        if '\n' in s:
             from js import tensuraPush
-            tensuraPush("".join(self.buf))
+            tensuraPush(''.join(self.buf))
             self.buf = []
 
     def flush(self):
         if self.buf:
             from js import tensuraPush
-            tensuraPush("".join(self.buf))
+            tensuraPush(''.join(self.buf))
             self.buf = []
 
-
-def boot():
+async def boot():
     sys.stdout = JsStream()
     try:
         sys.stderr = JsStream()
     except Exception:
         pass
     import game
-    game.main()
+    await (await game.main())

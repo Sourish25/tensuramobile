@@ -22,11 +22,11 @@ class JsStream:
             self.buf = []
 
 
-def boot():
+async def boot():
     sys.stdout = JsStream()
     try:
         sys.stderr = JsStream()
     except Exception:
         pass
     import game
-    game.main()
+    await game.main()

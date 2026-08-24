@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -35,10 +35,14 @@
   .spin { width:36px; height:36px; border-radius:50%;
     border:3px solid var(--edge); border-top-color:var(--gold); animation:sp 1s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
+  .inpline { display:flex; align-items:baseline; }
+  .inpline .ps1 { color:var(--gold); font-weight:700; white-space:pre; }
+  .inpline input { flex:1; min-width:0; background:transparent; border:0; outline:0;
+    color:var(--fg); font:inherit; line-height:inherit; caret-color:var(--gold); padding:0; }
 </style>
 </head>
 <body>
-  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.0.4</div></header>
+  <header><div class="t">TENSURA</div><div class="s" id="ver">v1.0.5</div></header>
 <div id="bootbar"></div>
 <main><pre class="term" id="term"></pre></main>
 <div id="loading">
@@ -50,7 +54,7 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 <script>
-const APP_VERSION = "v1.0.4";
+const APP_VERSION = "v1.0.5";
 document.title = `Tensura ${APP_VERSION}`;
 
 const term = document.getElementById("term");
@@ -80,16 +84,73 @@ function ansiToHtml(s){
   return out + "\n";
 }
 
+function scrollBottom(){
+  const m = document.querySelector("main");
+  m.scrollTop = m.scrollHeight;
+}
+
+let inpline = null;
+function getInputLine(){
+  if (inpline && inpline.isConnected) return inpline;
+  inpline = document.createElement("span");
+  inpline.className = "inpline";
+  const ps = document.createElement("span");
+  ps.className = "ps1";
+  ps.textContent = "> ";
+  const inp = document.createElement("input");
+  inp.setAttribute("autocapitalize", "off");
+  inp.setAttribute("autocomplete", "off");
+  inp.setAttribute("spellcheck", "false");
+  inp.setAttribute("autocorrect", "off");
+  inp.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter"){ e.preventDefault(); inp.dispatchEvent(new Event("tensura-enter")); }
+  });
+  inpline.appendChild(ps);
+  inpline.appendChild(inp);
+  term.appendChild(inpline);
+  return inpline;
+}
+
 window.tensuraPush = function(chunk){
   if (!chunk) return;
   hideLoading();
-  term.insertAdjacentHTML("beforeend", ansiToHtml(chunk));
-  const m = document.querySelector("main");
-  m.scrollTop = m.scrollHeight;
+  if (chunk.includes("\x1b[2J")){
+    term.innerHTML = "";
+    chunk = chunk.replace(/\x1b\[2J/g, "").replace(/\x1b\[H/g, "");
+    getInputLine();
+  }
+  const line = getInputLine();
+  if (chunk) line.insertAdjacentHTML("beforebegin", ansiToHtml(chunk));
+  scrollBottom();
 };
+
+let activePromptHandler = null;
 window.tensuraPrompt = function(text){
-  const cleaned = text.replace(/\x1b\[[0-9;]*m/g, "");
-  return window.prompt(cleaned);
+  return new Promise((resolve)=>{
+    const line = getInputLine();
+    const inp = line.querySelector("input");
+    if (activePromptHandler){
+      inp.removeEventListener("tensura-enter", activePromptHandler);
+      activePromptHandler = null;
+    }
+    const cleaned = (text == null ? "" : String(text)).replace(/\x1b\[[0-9;]*m/g, "");
+    if (cleaned.trim()){
+      line.insertAdjacentHTML("beforebegin", ansiToHtml(cleaned));
+    }
+    const handler = ()=>{
+      const v = inp.value;
+      inp.value = "";
+      inp.removeEventListener("tensura-enter", handler);
+      activePromptHandler = null;
+      line.insertAdjacentHTML("beforebegin", ansiToHtml("> " + v));
+      scrollBottom();
+      resolve(v);
+    };
+    activePromptHandler = handler;
+    inp.addEventListener("tensura-enter", handler);
+    inp.focus();
+    scrollBottom();
+  });
 };
 
 function hideLoading(){
@@ -200,7 +261,7 @@ os.chdir("/game")`);
 import sys
 sys.path.insert(0, "/game")
 import game_web
-game_web.boot()
+await game_web.boot()
 `);
   } catch (err){
     const text = "BOOT ERROR: " + (err && err.message ? err.message : err) +
