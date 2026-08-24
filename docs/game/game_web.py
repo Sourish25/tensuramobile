@@ -28,4 +28,4 @@ async def boot():
     except Exception:
         pass
     import game
-    await (await game.main())
+    await game.main()

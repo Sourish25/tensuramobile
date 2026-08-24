@@ -133,10 +133,17 @@ def revive_party(state):
         naming_sys.save_roster(state, subs)
 
 
-def postbattle_souls(state, enemies):
+def postbattle_souls(state, enemies, auto=False):
     h = state["hero"]
+    devoured = []
     for e in enemies:
         if e.alive:
+            continue
+        if auto:
+            dev = predator_sys.devour_one(state, e)
+            for mat, n in dev["materials"].items():
+                h.materials[mat] = h.materials.get(mat, 0) + n
+            devoured.append(e.name)
             continue
         t = mdata.MONSTERS[e.monster_id]
         sparable = bool(t.get("sparable")) or not e.is_boss
@@ -152,9 +159,15 @@ def postbattle_souls(state, enemies):
         elif sparable and c == 1:
             naming_sys.captures_add(state, e.monster_id, e.level)
             print(ui.M + f"The {e.name}'s fading spirit is bound to you." + ui.RESET)
+    if devoured:
+        seen = {}
+        for n in devoured:
+            seen[n] = seen.get(n, 0) + 1
+        summary = ", ".join(f"{n} x{k}" if k > 1 else n for n, k in seen.items())
+        print(ui.G + f"Devoured: {summary}." + ui.RESET)
 
 
-def battle_flow(state, monster_ids, location):
+def battle_flow(state, monster_ids, location, auto_devour=False):
     h = state["hero"]
     scale = 1 + (state["world"]["floor"] - 1) * 0.06
     enemies = [enemy_from_template(mid, scale) for mid in monster_ids]
@@ -179,7 +192,7 @@ def battle_flow(state, monster_ids, location):
             for l in ui.panel(" SPOILS ", [f"+{result['xp']} XP", ", ".join(dl)], ui.Y):
                 print(l)
         revive_party(state)
-        postbattle_souls(state, enemies)
+        postbattle_souls(state, enemies, auto_devour)
         combos = predator_sys.check_combinations(h)
         for child, gp in combos:
             ui.voice([
@@ -247,7 +260,7 @@ def on_boss_defeated(state, zid, boss_id):
     ui.pause()
 
 
-def explore(state):
+def explore(state, auto_devour=False):
     h = state["hero"]
     zid = state["world"]["zone"]
     zone = mdata.ZONES[zid]
@@ -267,7 +280,7 @@ def explore(state):
         print(f"{ui.ENEMY_C}{boss['glyph']} {boss['name']}{ui.RESET} - {boss.get('desc', '')}")
         c = ui.choose("Face it?", ["Fight!", "Retreat"])
         if c == 0:
-            out = battle_flow(state, [boss_id], loc_name + " - BOSS")
+            out = battle_flow(state, [boss_id], loc_name + " - BOSS", auto_devour)
             if out.get("result") == "win":
                 slain.append(boss_id)
                 on_boss_defeated(state, zid, boss_id)
@@ -306,7 +319,7 @@ def explore(state):
             print(f"\n{ui.C}You discover a path deeper in ({floor + 1}).{ui.RESET}")
         ui.pause()
         return
-    battle_flow(state, enc, loc_name)
+    battle_flow(state, enc, loc_name, auto_devour)
 
 
 def village_explore(state):
@@ -633,10 +646,17 @@ def recruit_menu(state):
 
 
 def explore_repeat(state, times=5):
+    c = ui.choose("Devour policy for this run:", [
+        "Ask after each battle",
+        "Devour ALL slain - fast run",
+    ], allow_cancel=True)
+    if c is None:
+        return
+    auto = (c == 1)
     for i in range(times):
         if not hero_ok_for_more(state):
             break
-        explore(state)
+        explore(state, auto_devour=auto)
     print(ui.DIM + f"Exploration run complete." + ui.RESET)
     ui.pause()
 

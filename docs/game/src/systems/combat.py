@@ -529,6 +529,11 @@ class Battle:
         while True:
             if getattr(u, 'auto', False):
                 self.draw()
+                c = await ui.choose(f'{u.name} [AUTO] engaged:', ['Keep auto - act on instinct', 'Take control (Auto: OFF)'], allow_cancel=False)
+                if c == 1:
+                    u.auto = False
+                    self.log.add(f'{u.name}: auto-battle released.')
+                    continue
                 tag = ui.BY + '[AUTO]' + ui.RESET + ' '
                 self.log.add(f'{tag}{u.name} acts on instinct...')
                 self.run_auto_turn(u)

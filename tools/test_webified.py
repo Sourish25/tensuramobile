@@ -1,4 +1,4 @@
-"""Headless smoke test for the webified payload.
+﻿"""Headless smoke test for the webified payload.
 
 Copies docs/game to a temp dir, injects a fake `js` module (menus, pauses,
 prompts, battle HUD) driven by a scripted answer list, then runs
@@ -36,11 +36,13 @@ def run():
 
     consumed = {"n": 0}
 
-    def take():
+    def take(label=""):
         if not answers:
             raise TestDone("script exhausted (reached live gameplay)")
         consumed["n"] += 1
-        return answers.pop(0)
+        v = answers.pop(0)
+        real_stdout.write(f"  [interaction {consumed['n']}] {label or '?'} -> {v!r}\n")
+        return v
 
     fake_js = types.ModuleType("js")
 
@@ -63,14 +65,18 @@ def run():
     fake_js.alert = lambda *a, **k: None
 
     async def tensuraPrompt(prompt=""):
-        return take()
+        return take("prompt:" + str(prompt))
 
     async def tensuraMenu(prompt="", options=None, allow_cancel=False,
                           cancel_label="Back"):
-        return take()
+        v = take("menu:" + str(prompt))
+        n = int(v) if v.strip().isdigit() else 1
+        if n < 1 or (options is not None and n > len(options)):
+            n = 1
+        return str(n)
 
     async def tensuraPause(label=""):
-        take()
+        take("pause:" + str(label))
         return ""
 
     def tensuraBattle(payload_json=""):
@@ -106,7 +112,8 @@ def run():
     except BaseException as e:
         sys.stdout = real_stdout
         import traceback
-        traceback.print_exc()
+        tb = traceback.format_exception(type(e), e, e.__traceback__)
+        real_stdout.write("".join(tb))
         print("SMOKE TEST FAIL: unexpected exception:", type(e).__name__, e)
         return 1
     finally:
